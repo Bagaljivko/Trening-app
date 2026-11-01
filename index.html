@@ -19,21 +19,21 @@
 <style>
 :root{
   --bg:#F5F5F7; --s1:#FFFFFF; --s2:#E8E8ED; --line:#DCDCE1; --ink:#0B0B0D; --mut:#6E6E73; --dim:#B4B4BA;
-  --neon:#1FD873; --neon-ink:#00140A; --neon-txt:#0E9F50; --neon-d:#CFEFDC; --red:#E5372B; --glow:none;
+  --pic:#121215; --neon:#1FD873; --neon-ink:#00140A; --neon-txt:#0E9F50; --neon-d:#CFEFDC; --red:#E5372B; --glow:none;
   color-scheme:light; box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#000000; --s1:#0C0C0E; --s2:#16161A; --line:#1E1E22; --ink:#F5F5F7; --mut:#8A8A90; --dim:#3C3C42;
-    --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
+    --pic:#0C0C0E; --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
     --glow:drop-shadow(0 0 10px rgba(61,255,143,.5)) drop-shadow(0 0 2px rgba(61,255,143,.9));
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#000000; --s1:#0C0C0E; --s2:#16161A; --line:#1E1E22; --ink:#F5F5F7; --mut:#8A8A90; --dim:#3C3C42;
-  --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
+  --pic:#0C0C0E; --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
   --glow:drop-shadow(0 0 10px rgba(61,255,143,.5)) drop-shadow(0 0 2px rgba(61,255,143,.9));
   color-scheme:dark;
 }
@@ -110,6 +110,9 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .fname{font-size:30px;line-height:1.12;letter-spacing:-.03em;margin:6px 0 0}
 .how{margin:12px 0 0;font-size:14.5px;line-height:1.5;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .how.open{display:block}
+.fpic{margin:16px 0 0;border-radius:24px;background:var(--pic);border:1px solid var(--line);overflow:hidden}
+.fpic img{display:block;width:100%;aspect-ratio:4/3;max-height:30vh;max-height:30dvh;object-fit:contain}
+.sheet-b .fpic img{max-height:38vh;max-height:38dvh}
 .more{margin-top:4px;color:var(--ink)}
 .nums{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:30px 0 0}
 .big{width:100%;border:0;background:transparent;padding:0;font-size:88px;font-weight:200;letter-spacing:-.06em;line-height:1;font-variant-numeric:tabular-nums;caret-color:var(--neon)}
@@ -267,6 +270,9 @@ function exById(id){
   if(typeof id === "number") { const e = SEED.ex[id]; return e ? exObj(e,id) : null; }
   const c = S.custom.find(x=>x.id===id); return c || null;
 }
+const slugOf = n => String(n).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+const imgOf = e => "images/" + (e && typeof e.id === "number" ? slugOf(e.name) : "new-exercise") + ".svg";
+const picHTML = e => `<div class="fpic"><img src="${imgOf(e)}" alt="${esc(e.name)}"></div>`;
 function allExercises(){
   return SEED.ex.map(exObj).concat(S.custom);
 }
@@ -516,6 +522,7 @@ function viewFocus(){
     <div class="fbody">
       <div class="grp">${GROUPS[e.group]||""}</div>
       <h2 class="fname">${esc(e.name)}</h2>
+      ${picHTML(e)}
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(e.desc)}</p><button class="link more" data-act="howtoggle">${howOpen?"Show less":"Show more"}</button>`:""}
       ${isTimed(it.ex) ? `<div class="nums one"><div class="num"><input class="big" inputmode="numeric" data-f="w" data-i="${i}" data-j="${j}" value="${esc(s.w)}" placeholder="30" aria-label="Seconds"><div class="u">seconds</div>
           <div class="step"><button data-act="nudge" data-f="w" data-d="-1" aria-label="5 seconds less">−5</button><button data-act="nudge" data-f="w" data-d="1" aria-label="5 seconds more">+5</button></div></div></div>` : `<div class="nums">
@@ -572,7 +579,7 @@ function viewSheet(){
     <div class="sheet-h"><h2>${esc(title)}</h2><button class="iconbtn" data-act="close" aria-label="Close">${ICON.x}</button></div><div class="sheet-b">${body}</div></div></div>`;
   if(sheet.type==="detail"){
     const e = exById(sheet.id); const h = historyFor(sheet.id); const pts = h.map(x=>maxW(x.it)); const best = Math.max(0,...pts);
-    return wrap(e.name, e.name, `<div class="grp">${GROUPS[e.group]}</div>${e.desc?`<p class="how open">${esc(e.desc)}</p>`:""}
+    return wrap(e.name, e.name, `<div class="grp">${GROUPS[e.group]}</div>${picHTML(e)}${e.desc?`<p class="how open">${esc(e.desc)}</p>`:""}
       <div class="stats sm"><div><b>${h.length}</b><span>times</span></div><div><b>${h.length?(best||"BW"):"–"}</b><span>best ${isTimed(sheet.id)?"seconds":"kg"}</span></div><div><b>${h.length?(maxW(h[h.length-1].it)||"BW"):"–"}</b><span>last ${isTimed(sheet.id)?"seconds":"kg"}</span></div></div>
       ${pts.length>1&&best>0?`<div class="chart">${spark(pts, isTimed(sheet.id)?"s":"kg")}</div>`:""}
       <div class="list">${h.slice().reverse().map(x=>`<div class="row static"><span class="nm">${esc(sessionTitle(x.s))}<small>${esc(x.s.date?fmtDate(x.s.date):"Before the app")}</small></span><span class="m"><b>${esc(setSummary(x.it))}</b></span></div>`).join("") || `<p class="lead">Not logged yet${e.startW?`. Your sheet had it at ${esc(fmtW(e.startW))}, ${e.sets} × ${e.reps}`:""}.</p>`}</div>

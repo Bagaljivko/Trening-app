@@ -133,6 +133,10 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .last b{color:var(--ink);font-weight:500}
 .last .up{color:var(--neon-txt);font-weight:500}
 .hint{margin-top:18px;font-size:14px;color:var(--mut)}
+.prbadge{display:inline-block;vertical-align:middle;font-size:12px;font-weight:700;letter-spacing:.02em;line-height:1;padding:6px 9px;border-radius:12px;background:var(--neon);color:var(--neon-ink);box-shadow:0 0 14px rgba(61,255,143,.35)}
+.prbadge.sm{font-size:10.5px;padding:4px 7px}
+.prdot{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:800;line-height:1;padding:3px 5px;border-radius:8px;background:var(--ink);color:var(--bg)}
+.toast.pr{background:var(--neon);color:var(--neon-ink);box-shadow:0 0 24px rgba(61,255,143,.5)}
 .hint .up{color:var(--neon-txt);font-weight:600}
 .hopts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .hopts .chip{height:36px;color:var(--ink)}
@@ -246,7 +250,7 @@ body.focusing .nav{display:none}
 .sheet-b .how{-webkit-line-clamp:unset}
 .chart{margin-top:20px}
 .chart svg{display:block;width:100%;height:auto}
-.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:20px;font-weight:600;font-size:14px;z-index:40;white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:20px;font-weight:600;font-size:14px;z-index:40;white-space:nowrap;pointer-events:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .cta:not(.ghost){box-shadow:0 0 28px rgba(61,255,143,.3)}
@@ -373,6 +377,35 @@ function overloadHint(exId){
   return {last:`${r1(w)} kg × ${r}`, opts:[{w:nw, r, label:`${nw} kg × ${r}`},{w, r:r+1, label:`${r1(w)} kg × ${r+1}`}],
     text:`try ${nw} kg or ${r+1} reps`};
 }
+/* ---------- personal records ---------- */
+// Best weight, reps and time per exercise, from history only (the workout in progress is not included).
+function computePRs(){
+  const out = {};
+  allSessions().forEach(s=>s.items.forEach(it=>{
+    const o = out[it.ex] || (out[it.ex] = {w:null, reps:null, time:null});
+    it.sets.forEach(x=>{
+      const w=+x.w||0, r=+x.r||0, rec={s, w, r};
+      if(isTimed(it.ex)){ if(w>0 && (!o.time || w>o.time.w)) o.time = rec; return; }
+      if(w>0 && (!o.w || w>o.w.w || (w===o.w.w && r>o.w.r))) o.w = rec;
+      if(r>0 && (!o.reps || r>o.reps.r || (r===o.reps.r && w>o.reps.w))) o.reps = rec;
+    });
+  }));
+  return out;
+}
+// Did this set beat a record? Compares with history and the sets already ticked in this workout.
+function prFor(i, j){
+  const it = S.plan.items[i], cs = it.sets[j], w=+cs.w||0, r=+cs.r||0;
+  const prev = [];
+  historyFor(it.ex).forEach(x=>x.it.sets.forEach(y=>prev.push({w:+y.w||0, r:+y.r||0})));
+  if(!prev.length) return null;                      // first time: nothing to beat yet
+  it.sets.forEach((y,k)=>{ if(k!==j && y.done) prev.push({w:+y.w||0, r:+y.r||0}); });
+  if(isTimed(it.ex)) return w > Math.max(...prev.map(p=>p.w)) ? {kind:"time", label:`${w} s`} : null;
+  const bestW = Math.max(...prev.map(p=>p.w));
+  if(w>0 && w>bestW) return {kind:"weight", label:`${r1(w)} kg × ${r}`};
+  const atLeast = prev.filter(p=>p.w>=w);
+  if(r>0 && atLeast.length && r>Math.max(...atLeast.map(p=>p.r))) return {kind:"reps", label: w ? `${r} reps at ${r1(w)} kg` : `${r} reps`};
+  return null;
+}
 function buildItem(exId){
   const sg = suggestion(exId);
   return {ex:exId, sets:Array.from({length:sg.sets},()=>({w:sg.w||"", r:sg.reps||"", done:false}))};
@@ -480,6 +513,11 @@ function setSummary(it){
   return it.sets.map(x=>`${+x.w||"BW"}×${x.r}`).join(", ");
 }
 let toastTimer;
+function prToast(pr){
+  toast("New PR: "+pr.label);
+  const t=document.querySelector(".toast"); if(t) t.classList.add("pr");
+  try{ navigator.vibrate && navigator.vibrate([60,40,60]); }catch(_){}
+}
 function toast(msg){
   document.querySelector(".toast")?.remove();
   const t = document.createElement("div"); t.className="toast"; t.setAttribute("role","status"); t.textContent=msg;
@@ -605,7 +643,7 @@ function viewToday(){
     const reps = it.sets[0]?.r || "";
     const meta = st.all ? `<span class="ok" aria-label="Done">${ICON.check}</span>` : st.d ? `<span class="part">${st.d}/${st.n}</span>` : `<span>${it.sets.length} × ${isTimed(it.ex) ? esc((+it.sets[0]?.w||30)+" s") : esc(reps)}</span>`;
     const w = isTimed(it.ex) ? "" : (+it.sets[0]?.w ? fmtW(it.sets[0].w) : "");
-    return `<button class="row${st.all?" done":""}" data-act="open" data-i="${i}"><span class="n">${i+1}</span><span class="nm">${esc(e.name)}</span><span class="m">${meta}<b>${esc(w)}</b></span></button>`; }).join("");
+    return `<button class="row${st.all?" done":""}" data-act="open" data-i="${i}"><span class="n">${i+1}</span><span class="nm">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge sm">PR</span>`:""}</span><span class="m">${meta}<b>${esc(w)}</b></span></button>`; }).join("");
   const cta = allDone ? `<button class="cta" data-act="finish">Finish workout</button>` : `<button class="cta" data-act="start">${anyDone?"Continue workout":"Start workout"}</button>`;
   return head + heroBlock() + `<section class="list">
       <div class="sec"><span>Today</span><button class="link" data-act="regen">Reshuffle</button></div>${rows}
@@ -621,7 +659,7 @@ function viewFocus(){
   const sg = suggestion(it.ex), hint = overloadHint(it.ex);
   const last = sg.last ? `Last time<br><b>${esc(setSummary(sg.last))}</b>` : sg.tmpl ? `From your sheet<br><b>${esc(fmtV(it.ex,sg.w))}</b>` : `First time`;
   const segs = items.map((x,k)=>`<button class="sg ${itemState(x).all?"d":""} ${k===i?"c":""}" data-act="jump" data-i="${k}" aria-label="Exercise ${k+1}"></button>`).join("");
-  const circles = it.sets.map((x,k)=>`<span class="sw"><button class="set ${x.done?"done":""} ${k===j?"cur":""}" data-act="sel" data-j="${k}" aria-label="Set ${k+1}${x.done?", done":""}">${k+1}</button>${k>=3?`<button class="setx" data-act="delsetj" data-i="${i}" data-j="${k}" aria-label="Delete set ${k+1}">${ICON.x}</button>`:""}</span>`).join("")
+  const circles = it.sets.map((x,k)=>`<span class="sw"><button class="set ${x.done?"done":""} ${k===j?"cur":""}" data-act="sel" data-j="${k}" aria-label="Set ${k+1}${x.done?", done":""}${x.pr?", personal record":""}">${k+1}</button>${x.pr?`<span class="prdot" aria-hidden="true">PR</span>`:""}${k>=3?`<button class="setx" data-act="delsetj" data-i="${i}" data-j="${k}" aria-label="Delete set ${k+1}">${ICON.x}</button>`:""}</span>`).join("")
     + `<button class="set add" data-act="addset" data-i="${i}" aria-label="Add set">+</button>`;
   const allDone = items.every(x=>itemState(x).all);
   const nextI = items.findIndex((x,k)=>k>i && !itemState(x).all);
@@ -636,7 +674,7 @@ function viewFocus(){
     <div class="ftop"><button class="iconbtn" data-act="back" aria-label="Back to today">${ICON.x}</button><div class="segs">${segs}</div><span class="cnt">${i+1}/${items.length}</span></div>
     <div class="fbody">
       <div class="grp">${GROUPS[e.group]||""}</div>
-      <h2 class="fname">${esc(e.name)}</h2>
+      <h2 class="fname">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge">New PR</span>`:""}</h2>
       ${picHTML(e)}
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(e.desc)}</p><button class="link more" data-act="howtoggle">${howOpen?"Show less":"Show more"}</button>`:""}
       ${hint?`<div class="hint"><span class="up">Last time ${esc(hint.last)}</span>, ${esc(hint.text)}<div class="hopts">${hint.opts.map(o=>`<button class="chip" data-act="usehint" data-w="${o.w??""}" data-r="${o.r??""}">${esc(o.label)}</button>`).join("")}</div></div>`:""}
@@ -681,6 +719,7 @@ function viewHistory(){
     <div class="stats"><div><b>${p.total}</b><span>workouts</span></div><div class="n"><b>${stk}</b><span>week streak</span></div><div><b>${p.month}</b><span>this month</span></div></div>
     <div class="weeks" role="img" aria-label="Workouts per week over the last 12 weeks">${grid}</div>
     <div class="wl"><span>12 weeks ago</span><span>This week</span></div>
+    <div class="list"><button class="row" data-act="prs"><span class="nm">Personal records<small>${Object.keys(computePRs()).length} exercises with a best</small></span><span class="m"><span class="prbadge sm">PR</span></span></button></div>
     <section class="list">${ss.map(s=>`<details class="sess"><summary><span><b>${esc(sessionTitle(s))}</b><small>${esc(s.date?fmtDate(s.date):"Before the app")}</small></span><span class="m">${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></summary>
       <ul>${s.items.map(it=>`<li><span>${esc(exById(it.ex)?.name||"Unknown")}</span><span>${esc(setSummary(it))}</span></li>`).join("")}</ul>
       ${s.seed?"":`<button class="link danger" data-act="delsess" data-id="${esc(s.id)}">Delete this workout</button>`}</details>`).join("")}</section>
@@ -733,6 +772,20 @@ function viewSheet(){
     const list=allExercises().filter(e=>!inPlan.has(e.id)&&(!q||e.name.toLowerCase().includes(q)));
     return wrap("Add exercise","Add exercise",`<input class="search" type="search" placeholder="Search" data-f="pq" value="${esc(sheet.q||"")}" aria-label="Search exercises">
       <div class="list">${list.map(e=>`<button class="row" data-act="addthis" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${GROUPS[e.group]}</small></span></button>`).join("")}</div>`);
+  }
+  if(sheet.type==="prs"){
+    const prs = computePRs(), when = s => s.date ? fmtDate(s.date) : "Before the app";
+    const groups = ORDER.concat("other").map(g=>{
+      const rows = allExercises().filter(e=>(e.group||"other")===g && prs[e.id]).map(e=>{
+        const o = prs[e.id], main = o.time || o.w || o.reps; if(!main) return "";
+        const big = o.time ? `${o.time.w} s` : o.w ? `${r1(o.w.w)} kg × ${o.w.r}` : `${o.reps.r} reps`;
+        const sub = [o.time ? "best time" : o.w ? "best weight" : "most reps", when(main.s)];
+        if(!o.time && o.w && o.reps && (o.reps.r>o.w.r)) sub.push(`most reps ${o.reps.r}${o.reps.w?` at ${r1(o.reps.w)} kg`:""}`);
+        return `<button class="row" data-act="detail" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${esc(sub.join(", "))}</small></span><span class="m"><b>${esc(big)}</b></span></button>`;
+      }).join("");
+      return rows ? `<div class="sec" style="margin-top:22px"><span>${GROUPS[g]}</span></div>${rows}` : "";
+    }).join("");
+    return wrap("Personal records","Personal records", groups ? `<p class="how open">Your best weight, reps or time for every exercise you've logged. Beat one during a workout and you'll see a PR badge.</p><div class="list">${groups}</div>` : `<p class="lead" style="margin-left:0">Finish a workout to start collecting records.</p>`);
   }
   if(sheet.type==="weighin"){
     const x = sheet.id ? (S.weighins.find(w=>w.id===sheet.id)||{}) : {};
@@ -859,7 +912,7 @@ $app.addEventListener("click", e=>{
       const it=S.plan.items[focus.i], w=b.dataset.w, r=b.dataset.r;
       it.sets.forEach((x,k)=>{ if(k>=selSet && !x.done){ if(w!=="") x.w=+w; if(r!=="") x.r=+r; } });
       persistPlan(); render(); toast("Set to "+b.textContent); break; }
-    case "undo": S.plan.items[focus.i].sets[selSet].done=false; persistPlan(); render(); break;
+    case "undo": { const us=S.plan.items[focus.i].sets[selSet]; us.done=false; delete us.pr; persistPlan(); render(); break; }
     case "addset": { const it=S.plan.items[i], l=it.sets[it.sets.length-1]; it.sets.push({w:l.w,r:l.r,done:false}); persistPlan(); render(); break; }
     case "delsetj": if(S.plan.items[i].sets.length>3 && j>=3){ S.plan.items[i].sets.splice(j,1); if(selSet>=S.plan.items[i].sets.length) selSet=null; persistPlan(); render(); } break;
     case "swap": swap(i); selSet=null; howOpen=false; break;
@@ -881,6 +934,7 @@ $app.addEventListener("click", e=>{
       S.custom.push({id:"c"+Date.now(), name:nm, group:sheet.g}); persistSettings(); sheet=null; render(); toast("Exercise saved"); break; }
     case "export": exportBackup(); break;
     case "import": document.getElementById("restore").click(); break;
+    case "prs": sheet={type:"prs"}; render(); break;
     case "weighin": sheet={type:"weighin"}; render(); setTimeout(()=>document.getElementById("wi-w")?.focus(),60); break;
     case "editwi": sheet={type:"weighin", id:b.dataset.id}; render(); break;
     case "wisnooze": S.settings.wiSnooze=ymd(new Date()); persistSettings(); render(); break;
@@ -916,11 +970,12 @@ $app.addEventListener("touchend", e=>{
 });
 
 function finish(){
+  const prs = S.plan.items.reduce((n,it)=>n+it.sets.filter(s=>s.done&&s.pr).length,0);
   const items = S.plan.items.map(it=>({ex:it.ex, sets:it.sets.filter(s=>s.done).map(s=>({w:+s.w||0, r:+s.r||0}))})).filter(it=>it.sets.length);
   if(!items.length) return toast("Complete at least one set first");
   const s = {id:Date.now().toString(36), date:new Date().toISOString(), items, v:2};
   S.sessions.push(s); S.plan=null; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
-  render(false); window.scrollTo(0,0); toast(`Workout ${S.sessions.length} saved`);
+  render(false); window.scrollTo(0,0); toast(`Workout ${S.sessions.length} saved`+(prs?`, ${prs} new PR${prs>1?"s":""}`:""));
 }
 async function exportBackup(){
   const data = JSON.stringify({app:"training-log",version:2,exported:new Date().toISOString(),
@@ -1016,11 +1071,12 @@ function restOver(){
 function completeAt(i,j,carry=true){
   const it=S.plan.items[i]; if(!it || !it.sets[j]) return;
   const cs=it.sets[j]; cs.done=true;
+  const pr = prFor(i,j); if(pr){ cs.pr = pr.kind; prToast(pr); } else delete cs.pr;
   if(carry) it.sets.forEach((x,k)=>{ if(k>j && !x.done){ x.w=cs.w; x.r=cs.r; } });
   if(focus && focus.i===i){
     const nx = it.sets.findIndex(s=>!s.done);
     if(nx>=0) selSet=nx;
-    else { const k=nextPending(); if(k>=0 && k!==focus.i){ focus.i=k; selSet=null; howOpen=false; toast("Next exercise"); } }
+    else { const k=nextPending(); if(k>=0 && k!==focus.i){ focus.i=k; selSet=null; howOpen=false; if(!pr) toast("Next exercise"); } }
   }
   persistPlan();
   if(!S.plan.items.every(x=>itemState(x).all)) startRest();

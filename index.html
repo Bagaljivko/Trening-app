@@ -190,6 +190,8 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .stepper button{width:40px;height:40px;border-radius:20px;border:1px solid var(--line);font-size:20px;font-weight:300}
 .stepper output{font-size:22px;font-weight:300;min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
 .fine{font-size:12.5px;color:var(--mut);margin:16px 0 0}
+h2.sub{font-size:16px;margin:28px 0 0}
+.cta.half{height:48px;font-size:15px;flex:1}
 
 /* nav */
 .nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
@@ -239,7 +241,7 @@ const ORDER = ["legs","chest","back","shoulders","biceps","triceps","abs"];
 const LS_KEY = "training-log-v1";
 const $app = document.getElementById("app");
 
-let S = {sessions:[], plan:null, settings:{count:7}, custom:[], updated:0};
+let S = {sessions:[], plan:null, settings:{count:7}, custom:[], updated:0, profile:{}, weighins:[]};
 let openHow = new Set(); let focus = null; let selSet = null; let howOpen = false;
 let rest = null, hold = null, actx = null, wakeLock = null;
 let tab = "today", filterGroup = "all", query = "", sheet = null;
@@ -248,6 +250,8 @@ let db = null, uid = null, saveTimer = null;
 /* ---------- data ---------- */
 function loadLocal(){
   try{ const raw = localStorage.getItem(LS_KEY); if(raw) S = Object.assign(S, JSON.parse(raw)); }catch(e){}
+  if(!S.profile || typeof S.profile!=="object") S.profile = {};
+  if(!Array.isArray(S.weighins)) S.weighins = [];
   S.sessions.forEach(migrate); if(S.plan) migrate(S.plan);
 }
 function myNumbered(){ return S.sessions.slice().sort((a,b)=>a.date.localeCompare(b.date)); }
@@ -370,7 +374,7 @@ function persistPlan(){
 }
 function persistSettings(){
   saveLocal();
-  if(db) ref("settings").set({settings:S.settings, custom:S.custom}).catch(()=>{});
+  if(db) ref("settings").set({settings:S.settings, custom:S.custom, profile:S.profile, weighins:S.weighins}).catch(()=>{});
 }
 function ref(id){ return db.collection("data/users/"+uid).doc(id); }
 async function persistSession(s){
@@ -393,7 +397,9 @@ async function connect(){
       const v = doc.data(); if(!v) return;
       if(doc.id==="plan") cloudPlan = v;
       else if(doc.id==="settings"){ if(v.settings) S.settings = Object.assign(S.settings, v.settings);
-        (v.custom||[]).forEach(c=>{ if(!S.custom.find(x=>x.id===c.id)) S.custom.push(c); }); changed = true; }
+        (v.custom||[]).forEach(c=>{ if(!S.custom.find(x=>x.id===c.id)) S.custom.push(c); });
+        if(v.profile && !Object.keys(S.profile).length) S.profile = v.profile;
+        (v.weighins||[]).forEach(w=>{ if(w && w.id && !S.weighins.find(x=>x.id===w.id)) S.weighins.push(w); }); changed = true; }
       else if(doc.id.startsWith("s-") && v.session && !have.has(v.session.id)){ S.sessions.push(migrate(v.session)); changed = true; }
     });
     if(cloudPlan && (cloudPlan.updated||0) > (S.updated||0)){ S.plan = migrate(cloudPlan.plan); S.updated = cloudPlan.updated; changed = true; }
@@ -570,8 +576,9 @@ function viewHistory(){
       ${s.seed?"":`<button class="link danger" data-act="delsess" data-id="${esc(s.id)}">Delete this workout</button>`}</details>`).join("")}</section>
     <section class="settings"><h2>Settings</h2>
       <div class="srow"><span>Exercises per workout</span><div class="stepper"><button data-act="cnt" data-d="-1" aria-label="Fewer">−</button><output>${S.settings.count}</output><button data-act="cnt" data-d="1" aria-label="More">+</button></div></div>
-      <div class="srow"><button class="link" data-act="export">Save backup</button><button class="link" data-act="import">Restore backup</button></div>
-      <p class="fine">Workouts are saved on this phone only. Save a backup now and then, and use Restore to move your log to a new phone.</p></section>`;
+      <h2 class="sub">Backup</h2>
+      <div class="srow"><button class="cta ghost half" data-act="export">Export all data</button><button class="cta ghost half" data-act="import">Import backup</button></div>
+      <p class="fine">Your data is saved on this phone only. Export saves workouts, history, profile and weigh-ins in one file. Import shows what it will change and asks first. It only adds workouts and weigh-ins, it never deletes them.</p></section>`;
 }
 function viewSheet(){
   if(!sheet) return "";
@@ -590,6 +597,23 @@ function viewSheet(){
     const list=allExercises().filter(e=>!inPlan.has(e.id)&&(!q||e.name.toLowerCase().includes(q)));
     return wrap("Add exercise","Add exercise",`<input class="search" type="search" placeholder="Search" data-f="pq" value="${esc(sheet.q||"")}" aria-label="Search exercises">
       <div class="list">${list.map(e=>`<button class="row" data-act="addthis" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${GROUPS[e.group]}</small></span></button>`).join("")}</div>`);
+  }
+  if(sheet.type==="restore"){
+    const v = sheet.data, r = restorePlan(v);
+    const when = v.exported ? ` from ${esc(fmtDate(v.exported))}` : "";
+    const li = (t,sub) => `<div class="row static"><span class="nm">${t}${sub?`<small>${sub}</small>`:""}</span></div>`;
+    return wrap("Restore backup","Restore backup",`<p class="how open">${esc(sheet.file)}${when}. Nothing changes until you tap Restore.</p>
+      <div class="list">
+        ${li(`${r.sess.length} workouts`, r.newSess.length ? `${r.newSess.length} new ones will be added. The ${S.sessions.length} already here are kept.` : "All already on this phone. Nothing to add.")}
+        ${li(`${r.wi.length} weigh-ins`, r.newWi.length ? `${r.newWi.length} new ones will be added. The ${S.weighins.length} already here are kept.` : "Nothing new to add.")}
+        ${r.prof ? li("Profile", r.profDiffers ? `<span class="danger">Your current profile will be replaced</span> with ${esc(r.prof.name||"the one in the backup")}.` : "Same as on this phone.") : ""}
+        ${r.custom.length ? li(`${r.custom.length} custom exercises`, "Will be added.") : ""}
+        ${r.sheetNew ? li("Spreadsheet history", "Will be added.") : ""}
+        ${r.settings ? li("Settings", "Exercises per workout and sound will be replaced.") : ""}
+        ${r.plan ? li("Workout in progress", "Will be restored as today's workout.") : ""}
+      </div>
+      <button class="cta wide" data-act="dorestore">Restore</button>
+      <button class="cta ghost wide" data-act="close">Cancel</button>`);
   }
   if(sheet.type==="newex"){
     return wrap("New exercise","New exercise",`<input id="nx-name" class="search" placeholder="Exercise name" aria-label="Exercise name">
@@ -679,6 +703,7 @@ $app.addEventListener("click", e=>{
       S.custom.push({id:"c"+Date.now(), name:nm, group:sheet.g}); persistSettings(); sheet=null; render(); toast("Exercise saved"); break; }
     case "export": exportBackup(); break;
     case "import": document.getElementById("restore").click(); break;
+    case "dorestore": if(sheet && sheet.type==="restore") applyRestore(sheet.data); break;
   }
 });
 // swipe between exercises in focus mode
@@ -701,7 +726,9 @@ function finish(){
   render(false); window.scrollTo(0,0); toast(`Workout ${S.sessions.length} saved`);
 }
 async function exportBackup(){
-  const data = JSON.stringify({app:"training-log",version:1,sessions:S.sessions,custom:S.custom,settings:S.settings,sheet:S.sheet||null},null,1);
+  const data = JSON.stringify({app:"training-log",version:2,exported:new Date().toISOString(),
+    sessions:S.sessions,plan:S.plan||null,custom:S.custom,settings:S.settings,sheet:S.sheet||null,
+    profile:S.profile||{},weighins:S.weighins||[]},null,1);
   const name = "training-backup-"+new Date().toISOString().slice(0,10)+".json";
   try{
     const file = new File([data], name, {type:"application/json"});
@@ -712,20 +739,37 @@ async function exportBackup(){
   setTimeout(()=>URL.revokeObjectURL(url), 2000); toast("Backup saved");
 }
 document.getElementById("restore").addEventListener("change", async e=>{
-  const f = e.target.files[0]; if(!f) return;
-  try{
-    const v = JSON.parse(await f.text());
-    if(v.app!=="training-log") throw 0;
-    const have = new Set(S.sessions.map(s=>s.id)); let added=0;
-    for(const s of v.sessions||[]) if(!have.has(s.id)){ migrate(s); S.sessions.push(s); added++; persistSession(s); }
-    (v.custom||[]).forEach(c=>{ if(!S.custom.find(x=>x.id===c.id)) S.custom.push(c); });
-    let sheetMsg = "";
-    if(v.sheet && v.sheet.done){ S.sheet = v.sheet; _seedCache = null; sheetMsg = `${v.sheet.done.length} older workouts and your starting weights loaded`; }
-    if(v.settings) S.settings = Object.assign(S.settings, v.settings);
-    persistSettings(); render(); toast(sheetMsg || (added? `Restored ${added} workouts` : "Nothing new in that backup"));
-  }catch(_){ toast("That file isn't a training backup"); }
-  e.target.value="";
+  const f = e.target.files[0]; e.target.value=""; if(!f) return;
+  let v;
+  try{ v = JSON.parse(await f.text()); if(!v || v.app!=="training-log") throw 0; }
+  catch(_){ return toast("That file isn't a training backup"); }
+  sheet = {type:"restore", data:v, file:f.name}; render();
 });
+// What a restore would do. Workouts and weigh-ins are only ever added, never removed or changed.
+function restorePlan(v){
+  const have = new Set(S.sessions.map(s=>s.id)), haveW = new Set(S.weighins.map(w=>w.id));
+  const sess = (v.sessions||[]).filter(s=>s && s.id && Array.isArray(s.items));
+  const wi = (v.weighins||[]).filter(w=>w && w.id && w.date && +w.w>0);
+  const prof = v.profile && Object.keys(v.profile).length ? v.profile : null;
+  const profDiffers = !!prof && JSON.stringify(prof)!==JSON.stringify(S.profile||{});
+  const custom = (v.custom||[]).filter(c=>c && c.id && !S.custom.find(x=>x.id===c.id));
+  const sheetNew = !!(v.sheet && v.sheet.done && !(S.sheet && S.sheet.done));
+  return {sess, newSess:sess.filter(s=>!have.has(s.id)), wi, newWi:wi.filter(w=>!haveW.has(w.id)), prof, profDiffers,
+    custom, sheetNew, settings: !!v.settings, plan: !!(v.plan && v.plan.items && v.plan.items.length && !S.plan)};
+}
+function applyRestore(v){
+  const r = restorePlan(v);
+  r.newSess.forEach(s=>{ migrate(s); S.sessions.push(s); persistSession(s); });
+  r.newWi.forEach(w=>S.weighins.push({id:w.id, date:w.date, w:+w.w, waist:+w.waist||null, chest:+w.chest||null, arm:+w.arm||null}));
+  r.custom.forEach(c=>S.custom.push(c));
+  if(r.profDiffers) S.profile = Object.assign({}, r.prof);
+  if(r.sheetNew){ S.sheet = v.sheet; _seedCache = null; }
+  if(v.settings) S.settings = Object.assign(S.settings, v.settings);
+  if(r.plan){ S.plan = migrate(v.plan); }
+  persistSettings(); if(r.plan) persistPlan();
+  sheet = null; render(false);
+  toast(r.newSess.length || r.newWi.length ? `Restored ${r.newSess.length} workouts, ${r.newWi.length} weigh-ins` : "Backup restored");
+}
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && sheet){ sheet=null; render(); } });
 
 

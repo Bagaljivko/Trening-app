@@ -191,12 +191,40 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .stepper output{font-size:22px;font-weight:300;min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
 .fine{font-size:12.5px;color:var(--mut);margin:16px 0 0}
 h2.sub{font-size:16px;margin:28px 0 0}
+/* body */
+.banner{margin:18px 24px 0;padding:14px 16px;border:1px solid var(--neon-d);background:var(--s1);border-radius:20px;display:flex;align-items:center;gap:12px}
+.banner p{flex:1;margin:0;font-size:14px;line-height:1.4}
+.banner p small{display:block;color:var(--mut);font-size:12.5px}
+.pill{height:38px;padding:0 16px;border-radius:19px;background:var(--neon);color:var(--neon-ink);font-weight:700;font-size:14px;white-space:nowrap}
+.bstats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 24px 0}
+.bstats div{display:flex;flex-direction:column;min-width:0}
+.bstats b{font-size:34px;font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bstats b small{font-size:14px;letter-spacing:0;margin-left:2px;color:var(--mut)}
+.bstats span{font-size:12.5px;color:var(--mut);margin-top:6px}
+.bstats em{font-style:normal}
+.good{color:var(--neon-txt)}
+.goal{margin:16px 24px 0;font-size:13px;color:var(--mut)}
+.box{margin:24px 24px 0}
+.box .chart{margin-top:8px}
+.prof{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px;margin:12px 0 0;font-size:14px}
+.prof span{color:var(--mut);display:block;font-size:12.5px}
+.field{display:block;margin-top:14px}
+.field span{display:block;font-size:13px;color:var(--mut);margin:0 0 6px 4px}
+.field input{width:100%;height:48px;border-radius:16px;border:1px solid var(--line);background:var(--s1);padding:0 16px;font-size:16px;-webkit-appearance:none;appearance:none}
+.field input:focus{outline:2px solid var(--neon);outline-offset:1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 10px}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;text-align:left;font-size:15px}
+.toggle i{flex:none;width:46px;height:28px;border-radius:14px;background:var(--s2);position:relative;transition:background .2s}
+.toggle i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--bg);box-shadow:0 1px 3px rgb(0 0 0 / .3);transition:transform .2s}
+.toggle[aria-pressed="true"] i{background:var(--neon)}
+.toggle[aria-pressed="true"] i::after{transform:translateX(18px)}
 .cta.half{height:48px;font-size:15px;flex:1}
 
 /* nav */
 .nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
 body.focusing .nav{display:none}
-.nav>div{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.nav>div{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
 .nav button{padding:11px 0 10px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--mut)}
 .nav svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round}
 .nav i{width:5px;height:5px;border-radius:50%}
@@ -232,6 +260,7 @@ body.focusing .nav{display:none}
   <button data-tab="today"><svg viewBox="0 0 24 24"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>Today<i></i></button>
   <button data-tab="exercises"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Exercises<i></i></button>
   <button data-tab="history"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>History<i></i></button>
+  <button data-tab="body"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 10a5 5 0 017 0M12 10l1.5-2"/></svg>Body<i></i></button>
 </div></nav>
 <input type="file" id="restore" accept=".json,application/json" class="sr">
 <script>
@@ -471,6 +500,63 @@ function ringSVG(lit){
 }
 function weekLabel(n){ return n>=3 ? "goal hit this week" : "this week"; }
 
+/* ---------- body tracking ---------- */
+const ymd = d => { const x = new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); };
+const parseYmd = s => { const [y,m,d] = String(s).split("-").map(Number); return new Date(y, m-1, d); };
+const daysSince = s => Math.round((parseYmd(ymd(new Date())) - parseYmd(s)) / 864e5);
+const fmtKg = v => (Math.round(v*10)/10).toString()+" kg";
+const signed = v => (v>0?"+":v<0?"−":"±")+(Math.round(Math.abs(v)*10)/10);
+function weighins(){ return (S.weighins||[]).slice().sort((a,b)=>a.date.localeCompare(b.date) || String(a.id).localeCompare(String(b.id))); }
+function bodyStats(){
+  const w = weighins(), P = S.profile||{};
+  const last = w[w.length-1] || null;
+  const start = +P.startW || (w[0] ? w[0].w : null);
+  const cutoff = ymd(new Date(Date.now()-7*864e5));
+  const weekRef = last ? [...w].reverse().find(x=>x.date<=cutoff && x.date<last.date) : null;
+  return {w, last, start, cur: last ? last.w : (+P.startW||null),
+    sinceStart: last && start ? last.w-start : null,
+    sinceWeek: last && weekRef ? last.w-weekRef.w : null,
+    toGoal: +P.goalW && (last||P.startW) ? (last ? last.w : +P.startW) - +P.goalW : null};
+}
+// a change counts as "good" when it moves toward the goal weight
+function towardGoal(delta){ const P=S.profile||{}; if(!delta || !+P.goalW || !+P.startW) return false; return Math.sign(delta) === Math.sign(+P.goalW - +P.startW); }
+function hasProfile(){ const P=S.profile||{}; return !!(P.name || +P.startW || +P.goalW || +P.height); }
+function weighInDue(){
+  const w = weighins();
+  if(!w.length) return hasProfile() ? {first:true, days:null} : null;
+  const d = daysSince(w[w.length-1].date);
+  return d >= 7 ? {first:false, days:d} : null;
+}
+function weighBanner(){
+  const due = weighInDue(); if(!due || S.settings.wiSnooze===ymd(new Date())) return "";
+  const msg = due.first ? "Log your first weigh-in" : `Your last weigh-in was ${due.days} days ago`;
+  return `<div class="banner" role="status"><p>${msg}<small>A quick weekly weigh-in keeps your chart honest.</small></p>
+    <button class="pill" data-act="weighin">Weigh in</button><button class="iconbtn" data-act="wisnooze" aria-label="Hide until tomorrow">${ICON.x}</button></div>`;
+}
+const canNotify = () => "Notification" in window && "serviceWorker" in navigator;
+async function toggleNotify(){
+  if(S.settings.wiNotify){ S.settings.wiNotify=false; persistSettings(); render(); return; }
+  if(!canNotify()) return toast("Notifications aren't available here");
+  let perm = Notification.permission;
+  if(perm==="default"){ try{ perm = await Notification.requestPermission(); }catch(_){ perm="denied"; } }
+  if(perm!=="granted"){ toast("Notifications are blocked for this app"); render(); return; }
+  S.settings.wiNotify = true; persistSettings(); render(); toast("Reminder on");
+}
+// Reminder while the app is open or in the background. The banner covers every other case.
+async function checkNotify(){
+  try{
+    if(!S.settings.wiNotify || !canNotify() || Notification.permission!=="granted" || !document.hidden) return;
+    const due = weighInDue(), today = ymd(new Date());
+    if(!due || S.settings.wiNotified===today) return;
+    const reg = await navigator.serviceWorker.getRegistration(); if(!reg) return;
+    await reg.showNotification("Time to weigh in", {body: due.first ? "Log your first weigh-in." : `It's been ${due.days} days since your last one.`,
+      tag:"weighin", icon:"icons/icon-192.png", badge:"icons/icon-192.png", data:{url:"./#weighin"}});
+    S.settings.wiNotified = today; saveLocal();
+  }catch(_){}
+}
+setInterval(checkNotify, 30*60*1000);
+document.addEventListener("visibilitychange", checkNotify);
+
 /* ---------- views ---------- */
 const longDate = () => new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"});
 function heroBlock(){
@@ -483,7 +569,7 @@ function heroBlock(){
 function itemState(it){ const d=it.sets.filter(s=>s.done).length; return {d, n:it.sets.length, all:d===it.sets.length}; }
 function viewToday(){
   const num = S.sessions.length + 1;
-  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>`;
+  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>` + weighBanner();
   if(!S.plan || !S.plan.items.length){
     const last = allSessions().slice(-1)[0];
     return head + heroBlock() + `<p class="lead">${last ? `Your next workout rotates away from ${esc(sessionTitle(last).toLowerCase())} and starts from your last weights.` : "Build a workout from your exercise list."}</p>
@@ -580,6 +666,31 @@ function viewHistory(){
       <div class="srow"><button class="cta ghost half" data-act="export">Export all data</button><button class="cta ghost half" data-act="import">Import backup</button></div>
       <p class="fine">Your data is saved on this phone only. Export saves workouts, history, profile and weigh-ins in one file. Import shows what it will change and asks first. It only adds workouts and weigh-ins, it never deletes them.</p></section>`;
 }
+function viewBody(){
+  const P = S.profile||{}, b = bodyStats();
+  const head = `<header class="pad"><div class="eyebrow">Body</div><h1>${esc(P.name||"Your body")}</h1></header>`;
+  if(!hasProfile() && !b.w.length){
+    return head + `<p class="lead">Set up your profile and log a weigh-in about once a week. You'll see your weight chart, and how much you've changed since you started and since last week.</p>
+      <div class="dock"><button class="cta" data-act="profile">Set up profile</button></div>`;
+  }
+  const kg = v => v===null||v===undefined ? "–" : `${Math.round(v*10)/10}<small>kg</small>`;
+  const ch = v => v===null ? "–" : `<em class="${towardGoal(v)?"good":""}">${signed(v)}</em><small>kg</small>`;
+  const pts = b.w.map(x=>({v:x.w, label:parseYmd(x.date).toLocaleDateString(undefined,{day:"numeric",month:"short"})}));
+  const notify = canNotify() ? `<button class="toggle" data-act="winotify" aria-pressed="${!!S.settings.wiNotify}"><span>Reminder notification<small class="fine" style="display:block;margin:2px 0 0">When a weigh-in is due and the app is in the background. The banner works without it.</small></span><i></i></button>` : `<p class="fine">Notifications aren't available in this browser. On iPhone they need the app added to the Home Screen. The weigh-in banner works everywhere.</p>`;
+  return head + weighBanner() + `
+    <div class="bstats"><div><b>${kg(b.cur)}</b><span>${b.last?"latest":"starting"}</span></div><div><b>${ch(b.sinceStart)}</b><span>since start</span></div><div><b>${ch(b.sinceWeek)}</b><span>since last week</span></div></div>
+    ${b.toGoal!==null ? `<p class="goal">${Math.abs(b.toGoal)<0.05 ? "You're at your goal weight." : `${fmtKg(Math.abs(b.toGoal))} to your goal of ${fmtKg(+P.goalW)}`}</p>` : ""}
+    ${pts.length ? `<div class="box"><div class="sec"><span>Weight</span></div><div class="chart">${lineChart(pts,"kg",{goal:+P.goalW||null,label:"Weight"})}</div></div>` : ""}
+    <section class="list"><div class="sec"><span>Weigh-ins</span><button class="link" data-act="weighin">Add</button></div>
+      ${b.w.slice().reverse().map(x=>{ const m=[x.waist&&`waist ${x.waist}`, x.chest&&`chest ${x.chest}`, x.arm&&`arm ${x.arm}`].filter(Boolean).join(", ");
+        return `<button class="row" data-act="editwi" data-id="${esc(x.id)}"><span class="nm">${esc(parseYmd(x.date).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short",year:"numeric"}))}${m?`<small>${esc(m)} cm</small>`:""}</span><span class="m"><b>${esc(fmtKg(x.w))}</b></span></button>`; }).join("") || `<p class="lead" style="margin-left:0">No weigh-ins yet.</p>`}
+    </section>
+    <section class="settings"><div class="sec"><span>Profile</span><button class="link" data-act="profile">Edit</button></div>
+      <div class="prof"><div><span>Height</span>${P.height?esc(P.height)+" cm":"–"}</div><div><span>Age</span>${P.age?esc(P.age):"–"}</div>
+        <div><span>Starting weight</span>${+P.startW?esc(fmtKg(+P.startW)):"–"}</div><div><span>Goal weight</span>${+P.goalW?esc(fmtKg(+P.goalW)):"–"}</div></div>
+      <div class="srow">${notify}</div></section>
+    <div class="dock"><button class="cta" data-act="weighin">Log weigh-in</button></div>`;
+}
 function viewSheet(){
   if(!sheet) return "";
   const wrap = (label, title, body) => `<div class="sheet-bg" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(label)}" data-stop>
@@ -597,6 +708,25 @@ function viewSheet(){
     const list=allExercises().filter(e=>!inPlan.has(e.id)&&(!q||e.name.toLowerCase().includes(q)));
     return wrap("Add exercise","Add exercise",`<input class="search" type="search" placeholder="Search" data-f="pq" value="${esc(sheet.q||"")}" aria-label="Search exercises">
       <div class="list">${list.map(e=>`<button class="row" data-act="addthis" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${GROUPS[e.group]}</small></span></button>`).join("")}</div>`);
+  }
+  if(sheet.type==="weighin"){
+    const x = sheet.id ? (S.weighins.find(w=>w.id===sheet.id)||{}) : {};
+    const last = weighins().slice(-1)[0];
+    const num = (id,label,val,ph,mode="decimal") => `<label class="field"><span>${label}</span><input id="${id}" inputmode="${mode}" value="${val??""}" placeholder="${ph}" autocomplete="off"></label>`;
+    return wrap("Weigh-in", sheet.id?"Edit weigh-in":"Log weigh-in", `
+      <label class="field"><span>Date</span><input id="wi-date" type="date" value="${esc(x.date||ymd(new Date()))}" max="${ymd(new Date())}"></label>
+      ${num("wi-w","Weight (kg)",x.w,last?last.w:(S.profile.startW||"80"))}
+      <div class="grid3">${num("wi-waist","Waist (cm)",x.waist,"optional")}${num("wi-chest","Chest (cm)",x.chest,"optional")}${num("wi-arm","Arm (cm)",x.arm,"optional")}</div>
+      <button class="cta wide" data-act="wisave">Save</button>
+      ${sheet.id?`<button class="link danger" style="margin-top:18px" data-act="widel">Delete this weigh-in</button>`:""}`);
+  }
+  if(sheet.type==="profile"){
+    const P = S.profile||{};
+    const f = (id,label,val,mode,ph="") => `<label class="field"><span>${label}</span><input id="${id}" ${mode?`inputmode="${mode}"`:""} value="${esc(val??"")}" placeholder="${ph}" autocomplete="off"></label>`;
+    return wrap("Profile","Profile", `${f("pf-name","Name",P.name,"","Your name")}
+      <div class="grid2">${f("pf-height","Height (cm)",P.height,"decimal")}${f("pf-age","Age",P.age,"numeric")}</div>
+      <div class="grid2">${f("pf-start","Starting weight (kg)",P.startW,"decimal")}${f("pf-goal","Goal weight (kg)",P.goalW,"decimal")}</div>
+      <button class="cta wide" data-act="pfsave">Save profile</button>`);
   }
   if(sheet.type==="restore"){
     const v = sheet.data, r = restorePlan(v);
@@ -622,6 +752,25 @@ function viewSheet(){
   }
   return "";
 }
+// Lightweight SVG line chart. pts: [{v, label}] in time order.
+function lineChart(pts, unit, opts={}){
+  const W=340, H=160, L=40, R=12, T=14, B=24;
+  const vals = pts.map(p=>p.v).concat(opts.goal ? [opts.goal] : []);
+  let mx = Math.max(...vals), mn = Math.min(...vals);
+  if(mx===mn){ mx+=1; mn-=1; }
+  const padv = (mx-mn)*.12; mx+=padv; mn-=padv;
+  const X = i => pts.length===1 ? (L+W-R)/2 : L + i*(W-L-R)/(pts.length-1);
+  const Y = v => T + (mx-v)/(mx-mn)*(H-T-B);
+  const r1 = v => Math.round(v*10)/10;
+  const hi = Math.max(...pts.map(p=>p.v)), lo = Math.min(...pts.map(p=>p.v));
+  const grid = [hi, lo].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${(Y(v)+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--mut)">${r1(v)}</text>`).join("");
+  const goal = opts.goal ? `<line x1="${L}" x2="${W-R}" y1="${Y(opts.goal).toFixed(1)}" y2="${Y(opts.goal).toFixed(1)}" stroke="var(--neon-txt)" stroke-width="1.2" stroke-dasharray="4 4" opacity=".7"/><text x="${W-R}" y="${(Y(opts.goal)-5).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--neon-txt)">goal ${r1(opts.goal)}</text>` : "";
+  const xy = pts.map((p,i)=>[X(i).toFixed(1), Y(p.v).toFixed(1)]);
+  const line = pts.length>1 ? `<polyline fill="none" stroke="var(--neon)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${xy.map(a=>a.join(",")).join(" ")}"/>` : "";
+  const dots = xy.map((a,i)=>`<circle cx="${a[0]}" cy="${a[1]}" r="${i===xy.length-1?4.5:2.6}" fill="var(--neon)"/>`).join("");
+  const xl = pts.length ? `<text x="${L}" y="${H-6}" font-size="11" fill="var(--mut)">${esc(pts[0].label||"")}</text>${pts.length>1?`<text x="${W-R}" y="${H-6}" text-anchor="end" font-size="11" fill="var(--mut)">${esc(pts[pts.length-1].label||"")}</text>`:""}` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label||"Chart")}, from ${r1(pts[0].v)} to ${r1(pts[pts.length-1].v)} ${unit}">${grid}${goal}${line}${dots}${xl}</svg>`;
+}
 function spark(pts, unit="kg"){
   const W=320,H=110,p=8, mx=Math.max(...pts), mn=Math.min(...pts.filter(x=>x>0), mx), span=(mx-mn)||1;
   const xy=pts.map((v,i)=>[p+i*(W-2*p)/(pts.length-1), H-p-((v-mn)/span)*(H-2*p)]);
@@ -631,7 +780,7 @@ function render(keepScroll=true){
   const y = window.scrollY;
   if(focus && (!S.plan || !S.plan.items[focus.i])) focus = null;
   document.body.classList.toggle("focusing", !!focus);
-  $app.innerHTML = (focus ? viewFocus() : tab==="today"?viewToday():tab==="exercises"?viewExercises():viewHistory()) + viewSheet();
+  $app.innerHTML = (focus ? viewFocus() : tab==="today"?viewToday():tab==="exercises"?viewExercises():tab==="body"?viewBody():viewHistory()) + viewSheet();
   document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===tab?"page":"false"));
   if(keepScroll) window.scrollTo(0,y);
 }
@@ -703,6 +852,25 @@ $app.addEventListener("click", e=>{
       S.custom.push({id:"c"+Date.now(), name:nm, group:sheet.g}); persistSettings(); sheet=null; render(); toast("Exercise saved"); break; }
     case "export": exportBackup(); break;
     case "import": document.getElementById("restore").click(); break;
+    case "weighin": sheet={type:"weighin"}; render(); setTimeout(()=>document.getElementById("wi-w")?.focus(),60); break;
+    case "editwi": sheet={type:"weighin", id:b.dataset.id}; render(); break;
+    case "wisnooze": S.settings.wiSnooze=ymd(new Date()); persistSettings(); render(); break;
+    case "winotify": toggleNotify(); break;
+    case "wisave": {
+      const val = id => { const v = parseFloat(String(document.getElementById(id).value).replace(",",".")); return isFinite(v) && v>0 ? Math.round(v*10)/10 : null; };
+      const w = val("wi-w"), date = document.getElementById("wi-date").value || ymd(new Date());
+      if(!w || w<20 || w>400) return toast("Enter your weight in kg");
+      const rec = {id: sheet.id || "w"+Date.now().toString(36), date, w, waist:val("wi-waist"), chest:val("wi-chest"), arm:val("wi-arm")};
+      const k = S.weighins.findIndex(x=>x.id===rec.id); if(k>=0) S.weighins[k]=rec; else S.weighins.push(rec);
+      if(!+S.profile.startW && S.weighins.length===1) S.profile.startW = w;
+      persistSettings(); sheet=null; render(); toast("Weigh-in saved"); break; }
+    case "widel": if(confirm("Delete this weigh-in?")){ S.weighins=S.weighins.filter(x=>x.id!==sheet.id); persistSettings(); sheet=null; render(); } break;
+    case "profile": sheet={type:"profile"}; render(); break;
+    case "pfsave": {
+      const g = id => document.getElementById(id).value.trim();
+      const n = id => { const v=parseFloat(g(id).replace(",",".")); return isFinite(v)&&v>0 ? Math.round(v*10)/10 : null; };
+      S.profile = {name:g("pf-name").slice(0,40), height:n("pf-height"), age:n("pf-age")?Math.round(n("pf-age")):null, startW:n("pf-start"), goalW:n("pf-goal")};
+      persistSettings(); sheet=null; render(); toast("Profile saved"); break; }
     case "dorestore": if(sheet && sheet.type==="restore") applyRestore(sheet.data); break;
   }
 });
@@ -862,8 +1030,10 @@ document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ tickRe
 
 /* ---------- start ---------- */
 loadLocal();
-const h = location.hash.slice(1); if(["today","exercises","history"].includes(h)) tab=h;
+const h = location.hash.slice(1); if(["today","exercises","history","body"].includes(h)) tab=h;
+if(h==="weighin"){ tab="body"; sheet={type:"weighin"}; }
 render();
+window.addEventListener("hashchange", ()=>{ if(location.hash==="#weighin"){ focus=null; tab="body"; sheet={type:"weighin"}; render(false); } });
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
 </script>
 </body>

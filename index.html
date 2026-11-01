@@ -133,6 +133,12 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .last b{color:var(--ink);font-weight:500}
 .last .up{color:var(--neon-txt);font-weight:500}
 .rested{margin:2px 0 6px;font-size:12.5px;color:var(--mut)}
+.toggle.ngt{padding:12px 0;border-bottom:1px solid var(--line)}
+.toggle.ngt b{display:block;font-size:15px;font-weight:600}
+.toggle.ngt small{display:block;font-size:12.5px;color:var(--mut);margin-top:2px}
+.ngwrap{margin:18px 24px 0}
+.ngwrap .toggle.ngt{border:1px solid var(--line);border-radius:18px;padding:12px 16px;background:var(--s1)}
+.ngtag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:2px 6px;border-radius:6px;border:1px solid var(--neon-txt);color:var(--neon-txt);margin-right:6px;vertical-align:1px}
 .hint{margin-top:18px;font-size:14px;color:var(--mut)}
 .prbadge{display:inline-block;vertical-align:middle;font-size:12px;font-weight:700;letter-spacing:.02em;line-height:1;padding:6px 9px;border-radius:12px;background:var(--neon);color:var(--neon-ink);box-shadow:0 0 14px rgba(61,255,143,.35)}
 .prbadge.sm{font-size:10.5px;padding:4px 7px}
@@ -285,6 +291,9 @@ const LS_KEY = "training-log-v1";
 // Muscles each built-in exercise works, main one first (same order as SEED.ex).
 const MUSCLES = {C:"chest",S:"shoulders",T:"triceps",B:"biceps",K:"back",L:"lower back",Q:"quads",H:"hamstrings",G:"glutes",A:"abs"};
 const EX_MUSCLES = ["CTS","HGLK","QG","TC","HGL","CST","B","A","LGH","S","QGS","A","CST","A","A","B","QG","A","SGH","A","CT","B","H","A","HG","A","B","T","A","C","HL","TC","QG","T","QG","CT","KB","T","ST","QGL","HLG","T","HL","QGS","QGA","QGA","Q","T","ST","S","A","CS","B","QG","KB","B","QG","T","S","A","A","A","S","KB","QGH","QG","A","C","GHQL","T","QG","CS","QG","KB","QG","CST","Q","QG","B","T","KB","QG","A","KB","KBS","CS","T","S","Q","QG","A","KB","KB","QGA","TC","B","A","ST","T","TC","B","T","A","AG","CT","TC","QG","KB","KB","QG","B","HGQL","TC","A","A","QG","Q","QG","SK","SK"];
+// No-gym (bodyweight) exercises for travelling. Their own ids, so they never mix with gym history.
+const NOGYM = [{"id": "ng-push-up", "name": "Push-up", "group": "chest", "m": "CTS", "sets": 3, "reps": 12, "desc": "Hands just wider than your shoulders, body in a straight line. Lower your chest to the floor and push back up."}, {"id": "ng-decline-push-up", "name": "Decline push-up, feet on a chair", "group": "chest", "m": "CST", "sets": 3, "reps": 10, "desc": "Feet on a chair or bed, hands on the floor. Keep your body straight, lower your chest to the floor and push up. Hits the upper chest."}, {"id": "ng-archer-push-up", "name": "Archer push-up", "group": "chest", "m": "CT", "sets": 3, "reps": 6, "desc": "Hands very wide. Lower toward one hand while the other arm stays almost straight, push up, then go to the other side."}, {"id": "ng-chair-dips", "name": "Chair dips", "group": "triceps", "m": "TC", "sets": 3, "reps": 12, "desc": "Hands on the edge of a sturdy chair behind you, knees bent. Lower until your elbows are about 90°, then press up. Keep your back close to the chair."}, {"id": "ng-diamond-push-up", "name": "Diamond push-up", "group": "triceps", "m": "TC", "sets": 3, "reps": 8, "desc": "Hands together under your chest, thumbs and index fingers making a diamond. Elbows close to your sides as you lower and push up."}, {"id": "ng-pike-push-up", "name": "Pike push-up", "group": "shoulders", "m": "ST", "sets": 3, "reps": 8, "desc": "Hips high in an upside-down V. Bend your elbows to bring the top of your head toward the floor between your hands, then push back up."}, {"id": "ng-plank-shoulder-taps", "name": "Plank shoulder taps", "group": "shoulders", "m": "SA", "sets": 3, "reps": 16, "desc": "High plank, feet a bit wider than hips. Tap one shoulder with the opposite hand, then switch, keeping your hips still."}, {"id": "ng-floor-y-t-raises", "name": "Floor Y-T raises", "group": "shoulders", "m": "SK", "sets": 3, "reps": 10, "desc": "Lie face down, forehead just off the floor. Lift your straight arms into a Y, lower, then lift them out to the sides into a T. Squeeze your shoulder blades."}, {"id": "ng-table-row", "name": "Table row", "group": "back", "m": "KB", "sets": 3, "reps": 10, "desc": "Lie under a sturdy table and grip its edge. Keep your body straight from heels to shoulders and pull your chest up to the table, then lower slowly. Test the table first."}, {"id": "ng-towel-row", "name": "Towel row", "group": "back", "m": "KB", "sets": 3, "reps": 12, "desc": "Loop a towel around a sturdy post or railing and hold both ends. Lean back with straight arms and your feet near the post, then pull your chest toward your hands."}, {"id": "ng-superman-raise", "name": "Superman raise", "group": "back", "m": "LG", "sets": 3, "reps": 12, "desc": "Lie face down, arms stretched forward. Lift your arms, chest and legs a few centimetres off the floor, hold a second, and lower."}, {"id": "ng-towel-curl", "name": "Towel curl", "group": "biceps", "m": "B", "sets": 3, "reps": 12, "desc": "Sit on a chair and loop a towel under one foot, holding an end in each hand. Curl up while your foot pushes down to make it hard. Lower slowly."}, {"id": "ng-door-frame-curl", "name": "Door-frame curl", "group": "biceps", "m": "B", "sets": 3, "reps": 10, "desc": "Hold a sturdy door frame with one hand at chest height, feet close to the frame. Lean back until your arm is straight, then curl yourself back in. Switch arms."}, {"id": "ng-split-squat", "name": "Split squat", "group": "legs", "m": "QG", "sets": 3, "reps": 10, "desc": "Long step stance, back heel up. Lower straight down until both knees are about 90°, then drive up through the front heel. Do both legs."}, {"id": "ng-rear-foot-elevated-split-squat", "name": "Rear-foot-elevated split squat, chair", "group": "legs", "m": "QG", "sets": 3, "reps": 8, "desc": "Back foot on a chair behind you. Lower until your front thigh is about parallel, then push up through the front heel. Do both legs."}, {"id": "ng-chair-step-up", "name": "Chair step-up", "group": "legs", "m": "QG", "sets": 3, "reps": 10, "desc": "Put one foot fully on a sturdy chair and push through that heel to stand up on it. Step down with control. Do both legs."}, {"id": "ng-wall-sit", "name": "Wall sit", "group": "legs", "m": "Q", "sets": 3, "reps": 0, "desc": "Back flat against the wall, feet shoulder-width, knees at 90°. Hold the position.", "timed": true, "secs": 40}, {"id": "ng-single-leg-glute-bridge", "name": "Single-leg glute bridge", "group": "legs", "m": "GH", "sets": 3, "reps": 10, "desc": "On your back, one foot on the floor and the other leg up. Drive through the heel to lift your hips until your body is straight, then lower. Do both legs."}, {"id": "ng-towel-hamstring-slide", "name": "Towel hamstring slide", "group": "legs", "m": "HG", "sets": 3, "reps": 8, "desc": "On your back with your heels on a towel on a smooth floor. Lift your hips, then slide your heels out until your legs are almost straight and pull them back in."}, {"id": "ng-single-leg-hip-hinge", "name": "Single-leg hip hinge", "group": "legs", "m": "HG", "sets": 3, "reps": 10, "desc": "Stand on one leg, arms forward. Hinge at the hips while the free leg reaches back, until your body is nearly level, then stand up. Do both legs."}, {"id": "ng-forearm-plank", "name": "Forearm plank", "group": "abs", "m": "A", "sets": 3, "reps": 0, "desc": "Forearms under shoulders, body in a straight line from head to heels. Brace your abs and hold.", "timed": true, "secs": 40}, {"id": "ng-dead-bug", "name": "Dead bug", "group": "abs", "m": "A", "sets": 3, "reps": 10, "desc": "On your back, arms up and knees over hips. Lower one arm and the opposite leg toward the floor without arching your back, return, and switch."}, {"id": "ng-mountain-climbers", "name": "Mountain climbers", "group": "abs", "m": "AQ", "sets": 3, "reps": 20, "desc": "High plank. Drive one knee toward your chest, then switch legs quickly, keeping your hips low."}, {"id": "ng-lying-leg-raise", "name": "Lying leg raise", "group": "abs", "m": "A", "sets": 3, "reps": 10, "desc": "On your back, hands under your hips. Raise your straight legs until they point up, then lower slowly without letting your lower back lift."}];
+const NGMAP = Object.fromEntries(NOGYM.map(e=>[e.id, e]));
 const GROUP_MUSCLES = {legs:"QG",chest:"CT",back:"KB",shoulders:"S",biceps:"B",triceps:"T",abs:"A",other:""};
 const $app = document.getElementById("app");
 
@@ -292,6 +301,7 @@ let S = {sessions:[], plan:null, settings:{count:7}, custom:[], updated:0, profi
 let openHow = new Set(); let focus = null; let selSet = null; let howOpen = false;
 let rest = null, hold = null, actx = null, wakeLock = null;
 let tab = "today", filterGroup = "all", query = "", sheet = null;
+let nogymNext = false;   // "No gym" picked before building; never saved, so the next workout starts as gym
 let db = null, uid = null, saveTimer = null;
 
 /* ---------- data ---------- */
@@ -317,16 +327,18 @@ function saveLocal(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
 }
 function exObj(e,i){ return {id:i,name:e[0],group:e[1],desc:e[2],startW:(S.sheet?.startW?.[i] ?? e[3]),sets:e[4],reps:e[5],freq:e[6]}; }
+function ngObj(n){ return {id:n.id, name:n.name, group:n.group, desc:n.desc, startW:n.timed?n.secs:0, sets:n.sets, reps:n.reps||"", freq:0, nogym:true}; }
 function exById(id){
   if(typeof id === "number") { const e = SEED.ex[id]; return e ? exObj(e,id) : null; }
+  if(NGMAP[id]) return ngObj(NGMAP[id]);
   const c = S.custom.find(x=>x.id===id); return c || null;
 }
 const slugOf = n => String(n).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
-const imgOf = e => "images/" + (e && typeof e.id === "number" ? slugOf(e.name) : "new-exercise") + ".svg";
+const imgOf = e => "images/" + (e && (typeof e.id === "number" || NGMAP[e.id]) ? slugOf(e.name) : "new-exercise") + ".svg";
 const picHTML = e => `<div class="fpic"><img src="${imgOf(e)}" alt="${esc(e.name)}"></div>`;
-function allExercises(){
-  return SEED.ex.map(exObj).concat(S.custom);
-}
+function gymExercises(){ return SEED.ex.map(exObj).concat(S.custom); }
+function nogymExercises(){ return NOGYM.map(ngObj); }
+function allExercises(){ return gymExercises().concat(nogymExercises()); }
 function migrate(s){
   if(!s || s.v===2) return s;
   s.items.forEach(it=>{ if(typeof it.ex==="number") it.ex = SEED.remap[it.ex] ?? it.ex; });
@@ -461,6 +473,7 @@ function prFor(i, j){
 /* ---------- muscle tags + recovery ---------- */
 function musclesOf(id){
   if(typeof id==="number" && EX_MUSCLES[id]) return EX_MUSCLES[id].split("");
+  if(NGMAP[id]) return NGMAP[id].m.split("");
   const e = exById(id); return (GROUP_MUSCLES[e?.group]||"").split("").filter(Boolean);
 }
 // Muscles hit in workouts finished in the last 48 hours.
@@ -483,7 +496,7 @@ function generate(){
   }));
   const lastEx = new Set((sessions[n-1]?.items||[]).map(it=>it.ex));
   const count = S.settings.count || 7;
-  const recent = recentMuscles(), pool = allExercises();
+  const recent = recentMuscles(), pool = gymExercises();
   // an exercise is "fresh" when its main muscle wasn't trained in the last 48 h
   const fresh = e => { const m = musclesOf(e.id)[0]; return !m || !recent.has(m); };
   const freshGroups = ORDER.filter(g=>pool.some(e=>e.group===g && fresh(e)));
@@ -514,12 +527,52 @@ function generate(){
   S.plan = {created:new Date().toISOString(), items, v:2, rested};
   persistPlan();
 }
+/* ---------- no gym (travel) mode ---------- */
+// Bodyweight stand-in for a gym exercise: same main muscle, closest movement pattern first.
+function noGymFor(exId, used){
+  const e = exById(exId); if(!e) return null;
+  if(e.nogym) return exId;
+  const n = e.name.toLowerCase(), ms = musclesOf(exId), m = ms[0], has = re => re.test(n);
+  let pref = [];
+  if(m==="C") pref = has(/incline|steep|low pulley/) ? ["decline-push-up","push-up","archer-push-up"] : ["push-up","archer-push-up","decline-push-up"];
+  else if(m==="T") pref = has(/dips/) ? ["chair-dips","diamond-push-up"] : ["diamond-push-up","chair-dips"];
+  else if(m==="S") pref = has(/press|snatch/) ? ["pike-push-up","plank-shoulder-taps","floor-y-t-raises"] : ["floor-y-t-raises","plank-shoulder-taps","pike-push-up"];
+  else if(m==="K") pref = has(/pulldown|bar pull|behind/) ? ["towel-row","table-row","superman-raise"] : ["table-row","towel-row","superman-raise"];
+  else if(m==="B") pref = ["towel-curl","door-frame-curl"];
+  else if(m==="Q") pref = has(/wall sit|hold/) ? ["wall-sit","split-squat"] : has(/step/) ? ["chair-step-up","split-squat"] : has(/bulgarian|lunge/) ? ["rear-foot-elevated-split-squat","split-squat","chair-step-up"] : ["split-squat","rear-foot-elevated-split-squat","chair-step-up","wall-sit"];
+  else if(m==="G") pref = ["single-leg-glute-bridge","single-leg-hip-hinge","split-squat"];
+  else if(m==="H") pref = has(/curl/) ? ["towel-hamstring-slide","single-leg-glute-bridge"] : ["single-leg-hip-hinge","towel-hamstring-slide","single-leg-glute-bridge"];
+  else if(m==="L") pref = ["superman-raise","single-leg-glute-bridge"];
+  else if(m==="A") pref = isTimed(exId) ? ["forearm-plank","dead-bug"] : has(/leg raise|scissor|flutter|knee|swing/) ? ["lying-leg-raise","dead-bug","mountain-climbers"] : has(/plank|climb/) ? ["mountain-climbers","forearm-plank","dead-bug"] : ["dead-bug","lying-leg-raise","mountain-climbers","forearm-plank"];
+  const ids = pref.map(x=>"ng-"+x)
+    .concat(NOGYM.filter(x=>x.m[0]===m).map(x=>x.id))
+    .concat(NOGYM.filter(x=>x.group===e.group).map(x=>x.id))
+    .concat(NOGYM.filter(x=>ms.some(k=>x.m.includes(k))).map(x=>x.id))
+    .filter(id=>NGMAP[id]);
+  return ids.find(id=>!used.has(id)) || ids[0] || null;
+}
+function toNoGym(){
+  const p = S.plan; if(!p || p.nogym) return;
+  p.gymItems = JSON.parse(JSON.stringify(p.items));   // kept so switching back restores the gym workout
+  const used = new Set();
+  p.items = p.items.map(it=>{ const id = noGymFor(it.ex, used); if(id===null) return it; used.add(id); return id===it.ex ? it : buildItem(id); });
+  p.nogym = true; persistPlan();
+}
+function toGym(){
+  const p = S.plan; if(!p || !p.nogym) return;
+  if(p.gymItems && p.gymItems.length){ p.items = p.gymItems; delete p.gymItems; p.nogym = false; persistPlan(); }
+  else { generate(); }
+}
+function noGymToggle(on){
+  return `<button class="toggle ngt" data-act="nogym" aria-pressed="${on}"><span><b>No gym</b><small>${on?"Bodyweight swaps, logged separately. This workout only.":"Travelling? Swap to bodyweight exercises."}</small></span><i></i></button>`;
+}
 function swap(i){
   const cur = S.plan.items[i], e = exById(cur.ex);
   const inPlan = new Set(S.plan.items.map(x=>x.ex));
   const lastEx = new Set((allSessions().slice(-1)[0]?.items||[]).map(x=>x.ex));
-  let c = allExercises().filter(x=>x.group===e.group && !inPlan.has(x.id) && !lastEx.has(x.id));
-  if(!c.length) c = allExercises().filter(x=>x.group===e.group && !inPlan.has(x.id));
+  const pool = S.plan.nogym ? nogymExercises() : gymExercises();
+  let c = pool.filter(x=>x.group===e.group && !inPlan.has(x.id) && !lastEx.has(x.id));
+  if(!c.length) c = pool.filter(x=>x.group===e.group && !inPlan.has(x.id));
   if(!c.length) return toast("No other "+GROUPS[e.group].toLowerCase()+" exercises yet");
   const recent = recentMuscles(), fc = c.filter(x=>!recent.has(musclesOf(x.id)[0]));
   if(fc.length) c = fc;
@@ -578,7 +631,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&
 const fmtW = w => (+w>0 ? (+w%1? (+w).toFixed(1) : +w)+" kg" : "bodyweight");
 // timed exercises: the w field holds seconds
 const TIMED = new Set([7,19,46,60,88,102,103]);
-const isTimed = id => TIMED.has(id);
+const isTimed = id => TIMED.has(id) || !!(NGMAP[id] && NGMAP[id].timed);
 const fmtV = (id,w) => isTimed(id) ? (+w||30)+" s" : fmtW(w);
 const col = g => `var(--${g||"other"})`;
 function fmtDate(iso){ return new Date(iso).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"}); }
@@ -713,7 +766,8 @@ function viewToday(){
     const last = allSessions().slice(-1)[0];
     const rec = muscleNames(recentMuscles());
     return head + heroBlock() + `<p class="lead">${last ? `Your next workout rotates away from ${esc(sessionTitle(last).toLowerCase())} and starts from your last weights.` : "Build a workout from your exercise list."}${rec.length?` It will rest ${esc(rec.join(", "))} where it can, since you trained them in the last 48 hours.`:""}</p>
-      <div class="dock"><button class="cta" data-act="gen">Build workout</button></div>`;
+      <div class="ngwrap">${noGymToggle(nogymNext)}</div>
+      <div class="dock"><button class="cta" data-act="gen">${nogymNext?"Build no-gym workout":"Build workout"}</button></div>`;
   }
   const items = S.plan.items;
   const anyDone = items.some(it=>it.sets.some(s=>s.done));
@@ -725,7 +779,7 @@ function viewToday(){
     return `<button class="row${st.all?" done":""}" data-act="open" data-i="${i}"><span class="n">${i+1}</span><span class="nm">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge sm">PR</span>`:""}${!it.plateauOff && !st.d && plateauOf(it.ex)?`<small class="goup">Time to go up</small>`:""}</span><span class="m">${meta}<b>${esc(w)}</b></span></button>`; }).join("");
   const cta = allDone ? `<button class="cta" data-act="finish">Finish workout</button>` : `<button class="cta" data-act="start">${anyDone?"Continue workout":"Start workout"}</button>`;
   return head + heroBlock() + `<section class="list">
-      <div class="sec"><span>Today</span><button class="link" data-act="regen">Reshuffle</button></div>${S.plan.rested&&S.plan.rested.length?`<p class="rested">Resting ${esc(S.plan.rested.join(", "))}, trained in the last 48 hours.</p>`:""}${rows}
+      <div class="sec"><span>Today</span><button class="link" data-act="regen">Reshuffle</button></div>${noGymToggle(!!S.plan.nogym)}${S.plan.rested&&S.plan.rested.length?`<p class="rested">Resting ${esc(S.plan.rested.join(", "))}, trained in the last 48 hours.</p>`:""}${rows}
       <div class="list-foot"><button class="link" data-act="add">Add exercise</button>${anyDone&&!allDone?`<button class="link" data-act="finish">Finish now</button>`:""}<button class="link danger" data-act="discard">Discard</button></div>
     </section><div class="dock">${cta}</div>`;
 }
@@ -752,7 +806,7 @@ function viewFocus(){
   return `<div class="focus" data-swipe>
     <div class="ftop"><button class="iconbtn" data-act="back" aria-label="Back to today">${ICON.x}</button><div class="segs">${segs}</div><span class="cnt">${i+1}/${items.length}</span></div>
     <div class="fbody">
-      <div class="grp">${GROUPS[e.group]||""}</div>
+      <div class="grp">${GROUPS[e.group]||""}${e.nogym?` · <span class="ngtag">No gym</span>`:""}</div>
       <h2 class="fname">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge">New PR</span>`:""}</h2>
       ${picHTML(e)}
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(e.desc)}</p><button class="link more" data-act="howtoggle">${howOpen?"Show less":"Show more"}</button>`:""}
@@ -781,13 +835,13 @@ function exStats(){
 }
 function viewExercises(){
   const st = exStats(); const q = query.trim().toLowerCase();
-  const list = allExercises().filter(e=>(filterGroup==="all"||e.group===filterGroup) && (!q || e.name.toLowerCase().includes(q)))
+  const list = allExercises().filter(e=>(filterGroup==="all"||(filterGroup==="nogym"?e.nogym:e.group===filterGroup)) && (!q || e.name.toLowerCase().includes(q)))
     .sort((a,b)=>(st[b.id]?.count||0)-(st[a.id]?.count||0) || (b.freq||0)-(a.freq||0));
   return `<header class="pad"><div class="eyebrow">${allExercises().length} exercises</div><h1>Exercises</h1></header>
     <div class="pad2"><input class="search" type="search" placeholder="Search" value="${esc(query)}" data-f="q" aria-label="Search exercises">
-    <div class="chips">${["all",...ORDER].map(g=>`<button class="chip${filterGroup===g?" on":""}" data-act="fg" data-g="${g}">${g==="all"?"All":GROUPS[g]}</button>`).join("")}</div></div>
+    <div class="chips">${["all",...ORDER,"nogym"].map(g=>`<button class="chip${filterGroup===g?" on":""}" data-act="fg" data-g="${g}">${g==="all"?"All":g==="nogym"?"No gym":GROUPS[g]}</button>`).join("")}</div></div>
     <section class="list">${list.map(e=>{const s=st[e.id]; const w = s ? fmtV(e.id,maxW(s.last)) : (e.startW? fmtV(e.id,e.startW):"");
-      return `<button class="row" data-act="detail" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${esc(muscleNames(musclesOf(e.id)).join(", ")||GROUPS[e.group])}${s?`, done ${s.count}×`:""}</small></span><span class="m"><b class="${s?"":"dim"}">${esc(w)}</b></span></button>`}).join("") || `<p class="lead">No exercises match. Try another word or pick All.</p>`}
+      return `<button class="row" data-act="detail" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${e.nogym?`<span class="ngtag">No gym</span>`:""}${esc(muscleNames(musclesOf(e.id)).join(", ")||GROUPS[e.group])}${s?`, done ${s.count}×`:""}</small></span><span class="m"><b class="${s?"":"dim"}">${esc(w)}</b></span></button>`}).join("") || `<p class="lead">No exercises match. Try another word or pick All.</p>`}
     <div class="list-foot"><button class="link" data-act="newex">Add a new exercise</button></div></section>`;
 }
 function viewHistory(){
@@ -799,7 +853,7 @@ function viewHistory(){
     <div class="weeks" role="img" aria-label="Workouts per week over the last 12 weeks">${grid}</div>
     <div class="wl"><span>12 weeks ago</span><span>This week</span></div>
     <div class="list"><button class="row" data-act="prs"><span class="nm">Personal records<small>${Object.keys(computePRs()).length} exercises with a best</small></span><span class="m"><span class="prbadge sm">PR</span></span></button></div>
-    <section class="list">${ss.map(s=>`<details class="sess"><summary><span><b>${esc(sessionTitle(s))}</b><small>${esc(s.date?fmtDate(s.date):"Before the app")}</small></span><span class="m">${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></summary>
+    <section class="list">${ss.map(s=>`<details class="sess"><summary><span><b>${esc(sessionTitle(s))}</b><small>${esc(s.date?fmtDate(s.date):"Before the app")}${s.nogym?" · No gym":""}</small></span><span class="m">${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></summary>
       <ul>${s.items.map(it=>`<li><span>${esc(exById(it.ex)?.name||"Unknown")}</span><span>${esc(setSummary(it))}</span></li>`).join("")}</ul>
       ${s.seed?"":`<button class="link danger" data-act="delsess" data-id="${esc(s.id)}">Delete this workout</button>`}</details>`).join("")}</section>
     <section class="settings"><h2>Settings</h2>
@@ -861,7 +915,7 @@ function viewSheet(){
   }
   if(sheet.type==="pick"){
     const q=(sheet.q||"").toLowerCase(); const inPlan=new Set((S.plan?.items||[]).map(x=>x.ex));
-    const list=allExercises().filter(e=>!inPlan.has(e.id)&&(!q||e.name.toLowerCase().includes(q)));
+    const list=(S.plan?.nogym ? nogymExercises() : gymExercises()).filter(e=>!inPlan.has(e.id)&&(!q||e.name.toLowerCase().includes(q)));
     return wrap("Add exercise","Add exercise",`<input class="search" type="search" placeholder="Search" data-f="pq" value="${esc(sheet.q||"")}" aria-label="Search exercises">
       <div class="list">${list.map(e=>`<button class="row" data-act="addthis" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${GROUPS[e.group]}</small></span></button>`).join("")}</div>`);
   }
@@ -972,9 +1026,15 @@ $app.addEventListener("click", e=>{
   const a=b.dataset.act, i=+b.dataset.i, j=+b.dataset.j;
   const idOf = v => (/^\d+$/.test(v) ? +v : v);
   switch(a){
-    case "gen": case "regen":
+    case "gen": case "regen": {
       if(a==="regen" && S.plan.items.some(it=>it.sets.some(s=>s.done)) && !confirm("Reshuffle and lose the sets you've ticked?")) return;
-      generate(); render(false); break;
+      const ng = a==="gen" ? nogymNext : !!S.plan?.nogym;
+      generate(); if(ng) toNoGym(); nogymNext = false; render(false); break; }
+    case "nogym": {
+      if(!S.plan || !S.plan.items.length){ nogymNext = !nogymNext; render(); break; }
+      const on = !S.plan.nogym;
+      if(S.plan.items.some(it=>it.sets.some(s=>s.done)) && !confirm(on ? "Switch to no-gym exercises and lose the sets you've ticked?" : "Switch back to the gym workout and lose the sets you've ticked?")) return;
+      on ? toNoGym() : toGym(); rest=null; render(); toast(on ? "No gym: bodyweight swaps" : "Back to the gym workout"); break; }
     case "open": openFocus(i); break;
     case "start": { const k=S.plan.items.findIndex(x=>!itemState(x).all); openFocus(k<0?0:k); break; }
     case "back": focus=null; render(false); window.scrollTo(0,0); break;
@@ -1012,7 +1072,7 @@ $app.addEventListener("click", e=>{
       S.plan.items.push(buildItem(idOf(b.dataset.id))); persistPlan(); sheet=null; focus=null; tab="today"; render(false); toast("Added to today"); break; }
     case "detail": sheet={type:"detail",id:idOf(b.dataset.id)}; render(); break;
     case "close": sheet=null; render(); break;
-    case "discard": if(confirm("Discard today's workout?")){ S.plan=null; rest=null; hold=null; releaseWake(); persistPlan(); render(false); } break;
+    case "discard": if(confirm("Discard today's workout?")){ S.plan=null; nogymNext=false; rest=null; hold=null; releaseWake(); persistPlan(); render(false); } break;
     case "finish": finish(); break;
     case "fg": filterGroup=b.dataset.g; render(); break;
     case "cnt": S.settings.count=Math.max(3,Math.min(10,S.settings.count+ +b.dataset.d)); persistSettings(); render(); break;
@@ -1063,7 +1123,8 @@ function finish(){
   const items = S.plan.items.map(it=>({ex:it.ex, sets:it.sets.filter(s=>s.done).map(s=>({w:+s.w||0, r:+s.r||0}))})).filter(it=>it.sets.length);
   if(!items.length) return toast("Complete at least one set first");
   const s = {id:Date.now().toString(36), date:new Date().toISOString(), items, v:2};
-  S.sessions.push(s); S.plan=null; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
+  if(S.plan.nogym) s.nogym = true;
+  S.sessions.push(s); S.plan=null; nogymNext=false; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
   render(false); window.scrollTo(0,0); toast(`Workout ${S.sessions.length} saved`+(prs?`, ${prs} new PR${prs>1?"s":""}`:""));
 }
 async function exportBackup(){

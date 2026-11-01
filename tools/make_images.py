@@ -11,7 +11,8 @@ On top of that style this file adds gym equipment: benches, boxes, barbells
 towers with pulleys, and a few machines.
 
 File names are the exercise name turned into a slug (see slug()); index.html
-uses the same rule to find the picture. Run from the repo root:
+uses the same rule to find the picture. Both the gym exercises (SEED) and the
+no-gym travel exercises (NOGYM) are read from index.html. Run from the repo root:
 
     python3 tools/make_images.py
 """
@@ -1300,6 +1301,221 @@ def ex_cable_fly(low=True):
     return d
 
 
+# ---------------------------------------------------------------- no-gym (travel) exercises
+def chair(x1, x2, seat=196, back="left"):
+    """Side view of a chair; the backrest rises from the `back` end of the seat."""
+    bx = x1 if back == "left" else x2
+    return "".join([seg((x1, seat), (x2, seat), PROP, 8),
+                    seg((x1 + 4, seat), (x1 + 4, G + 6), PROP, 6),
+                    seg((x2 - 4, seat), (x2 - 4, G + 6), PROP, 6),
+                    seg((bx, seat), (bx, seat - 76), PROP, 7)])
+
+
+def table(x1, x2, top=140):
+    return (seg((x1, top), (x2, top), PROP, 10) +
+            seg((x1 + 10, top), (x1 + 10, G + 6), PROP, 7) + seg((x2 - 10, top), (x2 - 10, G + 6), PROP, 7))
+
+
+def post(x, top=36):
+    return seg((x, top), (x, G + 6), PROP, 10) + seg((x - 16, G + 6), (x + 16, G + 6), PROP, 7)
+
+
+def towel(a, b):
+    """A towel held as a loop: two soft parallel strands."""
+    return seg((a[0], a[1] - 4), (b[0], b[1] - 4), IRON, 5) + seg((a[0], a[1] + 4), (b[0], b[1] + 4), IRON, 5)
+
+
+def ng_decline():
+    d = dict(N=(252, 208), P=(172, 200),
+             legs=[((130, 194), (88, 188)), ((132, 196), (92, 190))],
+             arms=[((248, 236), (248, G)), ((256, 236), (258, G))])
+    d["props"] = [chair(40, 110, 196, "left")]
+    d["arrows"] = [("L", 320, 170, 320, 240, True)]
+    return d
+
+
+def ng_archer():
+    d = dict(N=(244, 222), P=(164, 236),
+             legs=[((122, 246), (80, 256)), ((124, 248), (84, 258))],
+             arms=[((234, 244), (244, G)), ((278, 250), (316, G))])
+    d["arrows"] = [("Q", 214, 176, 262, 150, 310, 176, True)]
+    return d
+
+
+def ng_chair_dips():
+    d = ex_bench_dips(False)
+    d["props"] = [chair(34, 118, 200, "left")]
+    return d
+
+
+def ng_diamond():
+    d = ex_pushup("close")
+    x = 249
+    d["lines"] = d.get("lines", []) + [
+        f'<polygon points="{x},{G - 26} {x + 10},{G - 16} {x},{G - 6} {x - 10},{G - 16}" fill="none" stroke="{FAR}" stroke-width="3"/>']
+    return d
+
+
+def ng_pike():
+    d = dict(N=(246, 188), P=(184, 118),
+             legs=[((148, 190), (112, G)), ((150, 192), (116, G))],
+             arms=[((258, 224), (272, G)), ((264, 224), (280, G))])
+    d["arrows"] = [("L", 330, 160, 330, 236, True)]
+    return d
+
+
+def ng_shoulder_taps():
+    d = pushup()
+    d["arms"][1] = ((280, 222), (258, 202))
+    d["arrows"] = [("Q", 312, 250, 318, 196, 274, 176)]
+    return d
+
+
+def ng_yt():
+    d = dict(N=(270, 242), P=(196, 248), H=(294, 232),
+             legs=[((150, 250), (104, 254)), ((152, 252), (108, 257))],
+             arms=[((304, 228), (340, 212)), ((306, 234), (342, 220))])
+    d["arrows"] = [("L", 352, 198, 352, 146)]
+    return d
+
+
+def ng_table_row():
+    d = dict(N=(272, 196), P=(184, 222),
+             legs=[((136, 238), (90, 254)), ((138, 240), (94, G))],
+             arms=[((268, 168), (282, 146)), ((274, 170), (288, 146))])
+    d["H"] = (296, 186)
+    d["props"] = [table(150, 300, 140)]
+    d["arrows"] = [("L", 352, 236, 352, 160)]
+    return d
+
+
+def ng_towel_row():
+    d = dict(N=(214, 106), P=(250, 170),
+             legs=[((270, 216), (292, G)), ((276, 216), (298, G))],
+             arms=[((256, 114), (300, 122)), ((258, 120), (302, 128))])
+    d["H"] = (200, 84)
+    d["props"] = [post(334)]
+    d["back"] = [towel((300, 124), (334, 124))]
+    d["arrows"] = [("Q", 140, 150, 150, 90, 210, 58)]
+    return d
+
+
+def ng_superman():
+    d = dict(N=(270, 238), P=(196, 246), H=(292, 226),
+             legs=[((150, 238), (106, 222)), ((152, 242), (108, 228))],
+             arms=[((306, 226), (342, 212)), ((308, 232), (344, 220))])
+    d["arrows"] = [("L", 344, 196, 344, 150), ("L", 104, 206, 104, 160)]
+    return d
+
+
+def ng_towel_curl():
+    d = dict(N=(168, 118), P=(172, 192),
+             legs=[((224, 198), (224, G)), ((226, 194), (262, 226))],
+             arms=[((174, 152), (202, 130)), ((178, 154), (206, 134))])
+    d["props"] = [chair(120, 196, 200, "left")]
+    d["front"] = [towel((206, 134), (264, 228))]
+    d["arrows"] = [("Q", 244, 170, 262, 120, 226, 96)]
+    return d
+
+
+def ng_door_curl():
+    d = dict(N=(196, 112), P=(238, 176),
+             legs=[((260, 220), (280, G)), ((264, 220), (286, G))],
+             arms=[((206, 150), (214, 182)), ((248, 122), (296, 132))])
+    d["H"] = (182, 90)
+    d["props"] = [post(304)]
+    d["arrows"] = [("Q", 120, 120, 140, 60, 210, 50)]
+    return d
+
+
+def ng_rfe():
+    d = ex_lunge("bulgarian")
+    d["props"] = [chair(56, 148, 202, "left")]
+    d.pop("back", None)
+    d.pop("front", None)
+    return d
+
+
+def ng_step_up():
+    d = ex_step_up()
+    d["props"] = [chair(240, 320, 196, "right")]
+    return d
+
+
+def ng_glute_bridge(single=True):
+    d = dict(N=(125, 250), P=(202, 204), H=(100, 244),
+             legs=[((242, 196), (250, G)), ((248, 186), (296, 168)) if single else ((246, 198), (254, G))],
+             arms=[((160, 260), (196, 262)), ((164, 262), (200, 264))])
+    d["arrows"] = [("L", 202, 186, 202, 130)]
+    return d
+
+
+def ng_ham_slide():
+    d = dict(N=(125, 250), P=(206, 214), H=(100, 244),
+             legs=[((250, 222), (286, G - 2)), ((254, 224), (292, G - 2))],
+             arms=[((160, 260), (196, 262)), ((164, 262), (200, 264))])
+    d["props"] = [seg((272, G + 3), (310, G + 3), IRON, 7)]
+    d["arrows"] = [("L", 240, 292, 350, 292, True)]
+    return d
+
+
+def ng_hip_hinge():
+    d = ex_single_leg_dl()
+    d.pop("back", None)
+    d.pop("front", None)
+    d["arms"] = [((270, 176), (284, 204)), ((276, 176), (292, 204))]
+    return d
+
+
+def ng_dead_bug():
+    return dict(N=(150, 244), P=(222, 244), H=(124, 242),
+                legs=[((222, 196), (266, 196)), ((268, 230), (314, 234))],
+                arms=[((150, 206), (150, 168)), ((120, 222), (88, 210))],
+                arrows=[("Q", 92, 176, 64, 186, 70, 216), ("Q", 300, 196, 330, 202, 336, 226)])
+
+
+def ng_mountain():
+    d = pushup()
+    d["legs"] = [((128, 240), (86, 256)), ((214, 222), (184, 252))]
+    d["lines"] = [speed(78, 196, 3, 30, 12)]
+    d["arrows"] = [("L", 112, 290, 214, 290, True)]
+    return d
+
+
+def ng_leg_raise():
+    d = floor_back([(186, 180), (182, 180)], [(62, 62), (66, 66)])
+    d["arrows"] = [("Q", 340, 240, 350, 150, 290, 100)]
+    return d
+
+
+NOGYM_DRAW = {
+    "Push-up": lambda: ex_pushup("floor"),
+    "Decline push-up, feet on a chair": ng_decline,
+    "Archer push-up": ng_archer,
+    "Chair dips": ng_chair_dips,
+    "Diamond push-up": ng_diamond,
+    "Pike push-up": ng_pike,
+    "Plank shoulder taps": ng_shoulder_taps,
+    "Floor Y-T raises": ng_yt,
+    "Table row": ng_table_row,
+    "Towel row": ng_towel_row,
+    "Superman raise": ng_superman,
+    "Towel curl": ng_towel_curl,
+    "Door-frame curl": ng_door_curl,
+    "Split squat": lambda: ex_lunge("static"),
+    "Rear-foot-elevated split squat, chair": ng_rfe,
+    "Chair step-up": ng_step_up,
+    "Wall sit": ex_wall_sit,
+    "Single-leg glute bridge": ng_glute_bridge,
+    "Towel hamstring slide": ng_ham_slide,
+    "Single-leg hip hinge": ng_hip_hinge,
+    "Forearm plank": lambda: ex_plank("forearm"),
+    "Dead bug": ng_dead_bug,
+    "Mountain climbers": ng_mountain,
+    "Lying leg raise": ng_leg_raise,
+}
+
+
 PLACEHOLDER = ("new-exercise", "New exercise", lambda: stand([(150, 120), (30, 60)]))
 
 
@@ -1311,10 +1527,19 @@ def seed_names():
     return [e[0] for e in json.loads(m.group(1))["ex"]]
 
 
+def nogym_names():
+    """No-gym exercise names from the NOGYM list in index.html."""
+    import json
+    src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+    m = re.search(r"const NOGYM = (\[.*?\]);\n", src)
+    return [e["name"] for e in json.loads(m.group(1))]
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     names = seed_names()
-    missing = [n for n in names if n not in EXERCISES]
+    ng = nogym_names()
+    missing = [n for n in names if n not in EXERCISES] + [n for n in ng if n not in NOGYM_DRAW]
     if missing:
         sys.exit("No drawing for: " + ", ".join(missing))
     written = []
@@ -1322,6 +1547,13 @@ def main():
         s = slug(n)
         with open(os.path.join(OUT, s + ".svg"), "w", encoding="utf-8") as fh:
             fh.write(svg(n, EXERCISES[n]()))
+        written.append(s)
+    for n in ng:
+        s = slug(n)
+        if s in written:
+            sys.exit("Name clash with a gym exercise: " + n)
+        with open(os.path.join(OUT, s + ".svg"), "w", encoding="utf-8") as fh:
+            fh.write(svg(n, NOGYM_DRAW[n]()))
         written.append(s)
     s, title, fn = PLACEHOLDER
     with open(os.path.join(OUT, s + ".svg"), "w", encoding="utf-8") as fh:

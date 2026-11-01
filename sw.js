@@ -1,5 +1,5 @@
 // Offline support: keep the app shell and all exercise pictures cached, refresh them in the background.
-const CACHE = "training-v2";
+const CACHE = "training-v3";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
   "images/arnold-press-standing.svg",
   "images/back-extension.svg",
@@ -132,5 +132,14 @@ self.addEventListener("fetch", e => {
     const cached = await cache.match(e.request);
     const network = fetch(e.request).then(res => { if (res && (res.ok || res.type === "opaque")) cache.put(e.request, res.clone()); return res; }).catch(() => cached);
     return cached || network;
+  }));
+});
+// Weigh-in reminder: tapping the notification opens (or focuses) the app on the weigh-in form.
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({type: "window", includeUncontrolled: true}).then(list => {
+    for (const c of list) { if ("focus" in c) { c.navigate(url).catch(() => {}); return c.focus(); } }
+    return self.clients.openWindow(url);
   }));
 });

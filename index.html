@@ -205,14 +205,14 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .fine{font-size:12.5px;color:var(--mut);margin:16px 0 0}
 h2.sub{font-size:16px;margin:28px 0 0}
 /* body */
-.banner{margin:18px 24px 0;padding:14px 16px;border:1px solid var(--neon-d);background:var(--s1);border-radius:20px;display:flex;align-items:center;gap:12px}
-.banner p{flex:1;margin:0;font-size:14px;line-height:1.4}
+.banner{margin:18px 24px 0;padding:14px 16px;border:1px solid var(--neon-d);background:var(--s1);border-radius:20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.banner p{flex:1 1 170px;margin:0;font-size:14px;line-height:1.4}
 .banner p small{display:block;color:var(--mut);font-size:12.5px}
 .pill{height:38px;padding:0 16px;border-radius:19px;background:var(--neon);color:var(--neon-ink);font-weight:700;font-size:14px;white-space:nowrap}
-.bstats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 24px 0}
+.bstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:24px 24px 0}
 .bstats div{display:flex;flex-direction:column;min-width:0}
-.bstats b{font-size:34px;font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
-.bstats b small{font-size:14px;letter-spacing:0;margin-left:2px;color:var(--mut)}
+.bstats b{font-size:clamp(22px,8vw,34px);font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bstats b small{font-size:clamp(11px,3.4vw,14px);letter-spacing:0;margin-left:2px;color:var(--mut)}
 .bstats span{font-size:12.5px;color:var(--mut);margin-top:6px}
 .bstats em{font-style:normal}
 .good{color:var(--neon-txt)}
@@ -224,10 +224,10 @@ h2.sub{font-size:16px;margin:28px 0 0}
 .prof span{color:var(--mut);display:block;font-size:12.5px}
 .field{display:block;margin-top:14px}
 .field span{display:block;font-size:13px;color:var(--mut);margin:0 0 6px 4px}
-.field input{width:100%;height:48px;border-radius:16px;border:1px solid var(--line);background:var(--s1);padding:0 16px;font-size:16px;-webkit-appearance:none;appearance:none}
+.field input{width:100%;min-width:0;height:48px;border-radius:16px;border:1px solid var(--line);background:var(--s1);padding:0 16px;font-size:16px;-webkit-appearance:none;appearance:none}
 .field input:focus{outline:2px solid var(--neon);outline-offset:1px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 10px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 10px}
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;text-align:left;font-size:15px}
 .toggle i{flex:none;width:46px;height:28px;border-radius:14px;background:var(--s2);position:relative;transition:background .2s}
 .toggle i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--bg);box-shadow:0 1px 3px rgb(0 0 0 / .3);transition:transform .2s}
@@ -886,7 +886,8 @@ function viewSheet(){
     return wrap("Weigh-in", sheet.id?"Edit weigh-in":"Log weigh-in", `
       <label class="field"><span>Date</span><input id="wi-date" type="date" value="${esc(x.date||ymd(new Date()))}" max="${ymd(new Date())}"></label>
       ${num("wi-w","Weight (kg)",x.w,last?last.w:(S.profile.startW||"80"))}
-      <div class="grid3">${num("wi-waist","Waist (cm)",x.waist,"optional")}${num("wi-chest","Chest (cm)",x.chest,"optional")}${num("wi-arm","Arm (cm)",x.arm,"optional")}</div>
+      <p class="fine" style="margin-top:18px">Measurements are optional.</p>
+      <div class="grid3">${num("wi-waist","Waist",x.waist,"cm")}${num("wi-chest","Chest",x.chest,"cm")}${num("wi-arm","Arm",x.arm,"cm")}</div>
       <button class="cta wide" data-act="wisave">Save</button>
       ${sheet.id?`<button class="link danger" style="margin-top:18px" data-act="widel">Delete this weigh-in</button>`:""}`);
   }

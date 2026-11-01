@@ -114,7 +114,7 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .fpic img{display:block;width:100%;aspect-ratio:4/3;max-height:30vh;max-height:30dvh;object-fit:contain}
 .sheet-b .fpic img{max-height:38vh;max-height:38dvh}
 .more{margin-top:4px;color:var(--ink)}
-.nums{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:30px 0 0}
+.nums{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0 0}
 .big{width:100%;border:0;background:transparent;padding:0;font-size:88px;font-weight:200;letter-spacing:-.06em;line-height:1;font-variant-numeric:tabular-nums;caret-color:var(--neon)}
 .big::placeholder{color:var(--dim)}
 .u{font-size:13px;color:var(--mut);margin-top:4px}
@@ -132,6 +132,10 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .last{margin-top:22px;font-size:13px;color:var(--mut);line-height:1.5}
 .last b{color:var(--ink);font-weight:500}
 .last .up{color:var(--neon-txt);font-weight:500}
+.hint{margin-top:18px;font-size:14px;color:var(--mut)}
+.hint .up{color:var(--neon-txt);font-weight:600}
+.hopts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.hopts .chip{height:36px;color:var(--ink)}
 .tools{display:flex;gap:22px;margin:26px 0 0;flex-wrap:wrap}
 .fdock{position:sticky;bottom:0;padding:18px 24px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 30%)}
 .rest{border:1px solid var(--line);background:var(--s1);border-radius:24px;padding:14px 18px 12px}
@@ -349,6 +353,25 @@ function suggestion(exId){
   let w = lw, up = false;
   if(lw>0 && pw!==null && pw===lw && allDone){ w = lw + (lw>=40 ? 2.5 : 2); up = true; }
   return {sets:last.sets.length||3, reps:topReps(last)||10, w, last, lw, up};
+}
+// Progressive overload hint from the last time an exercise was done.
+const r1 = v => Math.round(v*10)/10;
+function overloadHint(exId){
+  const h = historyFor(exId);
+  if(!h.length) return null;
+  const last = h[h.length-1].it, sets = last.sets.filter(x=>(+x.w||0)>0 || (+x.r||0)>0);
+  if(!sets.length) return null;
+  if(isTimed(exId)){
+    const t = Math.max(...sets.map(x=>+x.w||0)); if(!t) return null;
+    const step = t>=60 ? 10 : 5;
+    return {last:`${t} s`, opts:[{w:t+step, label:`${t+step} s`}], text:`try ${t+step} s`};
+  }
+  const top = sets.reduce((a,x)=> (+x.w||0)>(+a.w||0) || ((+x.w||0)===(+a.w||0) && (+x.r||0)>(+a.r||0)) ? x : a);
+  const w = +top.w||0, r = +top.r||0;
+  if(!w) return {last:`${r} reps`, opts:[{r:r+1, label:`${r+1} reps`}], text:`try ${r+1} reps`};
+  const nw = r1(w + stepFor(w));
+  return {last:`${r1(w)} kg × ${r}`, opts:[{w:nw, r, label:`${nw} kg × ${r}`},{w, r:r+1, label:`${r1(w)} kg × ${r+1}`}],
+    text:`try ${nw} kg or ${r+1} reps`};
 }
 function buildItem(exId){
   const sg = suggestion(exId);
@@ -595,7 +618,7 @@ function viewFocus(){
   const e = exById(it.ex) || {name:"Unknown", group:"other"};
   if(selSet===null || selSet>=it.sets.length){ const k = it.sets.findIndex(s=>!s.done); selSet = k<0 ? it.sets.length-1 : k; }
   const j = selSet, s = it.sets[j];
-  const sg = suggestion(it.ex);
+  const sg = suggestion(it.ex), hint = overloadHint(it.ex);
   const last = sg.last ? `Last time<br><b>${esc(setSummary(sg.last))}</b>` : sg.tmpl ? `From your sheet<br><b>${esc(fmtV(it.ex,sg.w))}</b>` : `First time`;
   const segs = items.map((x,k)=>`<button class="sg ${itemState(x).all?"d":""} ${k===i?"c":""}" data-act="jump" data-i="${k}" aria-label="Exercise ${k+1}"></button>`).join("");
   const circles = it.sets.map((x,k)=>`<span class="sw"><button class="set ${x.done?"done":""} ${k===j?"cur":""}" data-act="sel" data-j="${k}" aria-label="Set ${k+1}${x.done?", done":""}">${k+1}</button>${k>=3?`<button class="setx" data-act="delsetj" data-i="${i}" data-j="${k}" aria-label="Delete set ${k+1}">${ICON.x}</button>`:""}</span>`).join("")
@@ -616,6 +639,7 @@ function viewFocus(){
       <h2 class="fname">${esc(e.name)}</h2>
       ${picHTML(e)}
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(e.desc)}</p><button class="link more" data-act="howtoggle">${howOpen?"Show less":"Show more"}</button>`:""}
+      ${hint?`<div class="hint"><span class="up">Last time ${esc(hint.last)}</span>, ${esc(hint.text)}<div class="hopts">${hint.opts.map(o=>`<button class="chip" data-act="usehint" data-w="${o.w??""}" data-r="${o.r??""}">${esc(o.label)}</button>`).join("")}</div></div>`:""}
       ${isTimed(it.ex) ? `<div class="nums one"><div class="num"><input class="big" inputmode="numeric" data-f="w" data-i="${i}" data-j="${j}" value="${esc(s.w)}" placeholder="30" aria-label="Seconds"><div class="u">seconds</div>
           <div class="step"><button data-act="nudge" data-f="w" data-d="-1" aria-label="5 seconds less">−5</button><button data-act="nudge" data-f="w" data-d="1" aria-label="5 seconds more">+5</button></div></div></div>` : `<div class="nums">
         <div class="num"><input class="big" inputmode="decimal" data-f="w" data-i="${i}" data-j="${j}" value="${esc(s.w)}" placeholder="0" aria-label="Weight in kg"><div class="u">kg</div>
@@ -624,7 +648,7 @@ function viewFocus(){
           <div class="step"><button data-act="nudge" data-f="r" data-d="-1" aria-label="Fewer reps">−</button><button data-act="nudge" data-f="r" data-d="1" aria-label="More reps">+</button></div></div>
       </div>`}
       <div class="sets">${circles}</div>
-      <div class="last">${last}${sg.up?`<br><span class="up">Try ${esc(fmtV(it.ex,sg.w))} today</span>`:""}</div>
+      <div class="last">${last}</div>
       <div class="tools"><button class="link" data-act="swap" data-i="${i}">Swap exercise</button><button class="link" data-act="detail" data-id="${it.ex}">History</button><button class="link danger" data-act="removefocus" data-i="${i}">Remove</button></div>
     </div>
     <div class="fdock">${next&&!allDone?`<div class="next"><span>Next</span><b>${esc(next)}</b></div>`:""}<div id="ctaBox">${cta}</div></div>
@@ -699,6 +723,7 @@ function viewSheet(){
     const e = exById(sheet.id); const h = historyFor(sheet.id); const pts = h.map(x=>maxW(x.it)); const best = Math.max(0,...pts);
     return wrap(e.name, e.name, `<div class="grp">${GROUPS[e.group]}</div>${picHTML(e)}${e.desc?`<p class="how open">${esc(e.desc)}</p>`:""}
       <div class="stats sm"><div><b>${h.length}</b><span>times</span></div><div><b>${h.length?(best||"BW"):"–"}</b><span>best ${isTimed(sheet.id)?"seconds":"kg"}</span></div><div><b>${h.length?(maxW(h[h.length-1].it)||"BW"):"–"}</b><span>last ${isTimed(sheet.id)?"seconds":"kg"}</span></div></div>
+      ${(()=>{ const hn=overloadHint(sheet.id); return hn?`<p class="last">Last time <b>${esc(hn.last)}</b>. Next time ${esc(hn.text)}.</p>`:""; })()}
       ${pts.length>1&&best>0?`<div class="chart">${spark(pts, isTimed(sheet.id)?"s":"kg")}</div>`:""}
       <div class="list">${h.slice().reverse().map(x=>`<div class="row static"><span class="nm">${esc(sessionTitle(x.s))}<small>${esc(x.s.date?fmtDate(x.s.date):"Before the app")}</small></span><span class="m"><b>${esc(setSummary(x.it))}</b></span></div>`).join("") || `<p class="lead">Not logged yet${e.startW?`. Your sheet had it at ${esc(fmtW(e.startW))}, ${e.sets} × ${e.reps}`:""}.</p>`}</div>
       ${S.plan && !focus?`<button class="cta ghost wide" data-act="addthis" data-id="${sheet.id}">Add to today</button>`:""}`);
@@ -830,6 +855,10 @@ $app.addEventListener("click", e=>{
     case "rest30": if(rest && !rest.over){ rest.end+=30000; rest.total+=30000; tickRest(); } break;
     case "restgo": rest=null; render(); break;
     case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=restHTML(); break;
+    case "usehint": {
+      const it=S.plan.items[focus.i], w=b.dataset.w, r=b.dataset.r;
+      it.sets.forEach((x,k)=>{ if(k>=selSet && !x.done){ if(w!=="") x.w=+w; if(r!=="") x.r=+r; } });
+      persistPlan(); render(); toast("Set to "+b.textContent); break; }
     case "undo": S.plan.items[focus.i].sets[selSet].done=false; persistPlan(); render(); break;
     case "addset": { const it=S.plan.items[i], l=it.sets[it.sets.length-1]; it.sets.push({w:l.w,r:l.r,done:false}); persistPlan(); render(); break; }
     case "delsetj": if(S.plan.items[i].sets.length>3 && j>=3){ S.plan.items[i].sets.splice(j,1); if(selSet>=S.plan.items[i].sets.length) selSet=null; persistPlan(); render(); } break;

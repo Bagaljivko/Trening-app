@@ -183,8 +183,16 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .cta.go{animation:go 1.2s ease-in-out infinite}
 @keyframes go{50%{box-shadow:0 0 38px rgba(61,255,143,.65);transform:scale(1.015)}}
 @media (prefers-reduced-motion:reduce){.cta.go{animation:none}}
-.next{display:flex;justify-content:space-between;gap:16px;font-size:13px;color:var(--mut);margin-bottom:14px}
-.next b{color:var(--ink);font-weight:500;text-align:right}
+.upnext{margin:22px 0 0;padding:16px;border-radius:24px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--neon)}
+.upnext.done{box-shadow:inset 0 0 0 1.5px var(--line)}
+.un-row{display:flex;gap:14px;align-items:center;min-width:0}
+.un-pic{flex:none;width:96px;height:72px;border-radius:16px;background:var(--pic);overflow:hidden}
+.un-pic img{display:block;width:100%;height:100%;object-fit:contain}
+.un-txt{min-width:0}
+.un-eye{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--neon-txt)}
+.un-name{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-top:3px;overflow-wrap:anywhere}
+.un-sub{font-size:13px;color:var(--mut);margin:4px 0 0}
+.cta.un-go{margin-top:16px;height:52px;font-size:16px;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:52px;text-align:center}
 
 /* exercises */
 .search{width:100%;height:46px;border-radius:23px;border:1px solid var(--line);background:var(--s1);padding:0 18px}
@@ -810,11 +818,13 @@ function viewFocus(){
   const circles = it.sets.map((x,k)=>`<span class="sw"><button class="set ${x.done?"done":""} ${k===j?"cur":""}" data-act="sel" data-j="${k}" aria-label="Set ${k+1}${x.done?", done":""}${x.pr?", personal record":""}">${k+1}</button>${x.pr?`<span class="prdot" aria-hidden="true">PR</span>`:""}${k>=3?`<button class="setx" data-act="delsetj" data-i="${i}" data-j="${k}" aria-label="Delete set ${k+1}">${ICON.x}</button>`:""}</span>`).join("")
     + `<button class="set add" data-act="addset" data-i="${i}" aria-label="Add set">+</button>`;
   const allDone = items.every(x=>itemState(x).all);
-  const nextI = items.findIndex((x,k)=>k>i && !itemState(x).all);
-  const next = nextI>=0 ? exById(items[nextI].ex)?.name : (items.findIndex(x=>!itemState(x).all)>=0 ? exById(items[items.findIndex(x=>!itemState(x).all)].ex)?.name : null);
+  const exDone = itemState(it).all && !focus.edit;
+  const nextI = nextPending();
+  const upNext = exDone ? upNextHTML(nextI, allDone) : "";
   let cta;
   if(hold) cta = holdHTML();
   else if(rest && !allDone) cta = restHTML();
+  else if(exDone && !allDone) cta = "";
   else if(allDone) cta = `<button class="cta" data-act="finish">Finish workout</button>`;
   else if(s.done) cta = `<button class="cta ghost" data-act="undo">Undo set ${j+1}</button>`;
   else cta = isTimed(it.ex) ? `<button class="cta" data-act="hold">Start ${esc(+s.w||30)} s</button>` : `<button class="cta" data-act="complete">Complete set ${j+1}</button>`;
@@ -825,16 +835,24 @@ function viewFocus(){
       <h2 class="fname">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge">New PR</span>`:""}</h2>
       ${picHTML(e)}
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(e.desc)}</p><button class="link more" data-act="howtoggle">${howOpen?"Show less":"Show more"}</button>`:""}
-      ${hint?`<div class="hint${hint.plateau?" plateau":""}">${hint.plateau?`<button class="iconbtn hx" data-act="plateauoff" data-i="${i}" aria-label="Dismiss for this workout">${ICON.x}</button><span class="up">${esc(hint.text)}</span>`:`<span class="up">Last time ${esc(hint.last)}</span>, ${esc(hint.text)}`}<div class="hopts">${hint.opts.map(o=>`<button class="chip" data-act="usehint" data-w="${o.w??""}" data-r="${o.r??""}">${esc(o.label)}</button>`).join("")}</div></div>`:""}
-      ${numCards(it, i, j, s)}
+      ${upNext}
+      ${!exDone && hint?`<div class="hint${hint.plateau?" plateau":""}">${hint.plateau?`<button class="iconbtn hx" data-act="plateauoff" data-i="${i}" aria-label="Dismiss for this workout">${ICON.x}</button><span class="up">${esc(hint.text)}</span>`:`<span class="up">Last time ${esc(hint.last)}</span>, ${esc(hint.text)}`}<div class="hopts">${hint.opts.map(o=>`<button class="chip" data-act="usehint" data-w="${o.w??""}" data-r="${o.r??""}">${esc(o.label)}</button>`).join("")}</div></div>`:""}
+      ${exDone ? "" : numCards(it, i, j, s)}
       <div class="sets">${circles}</div>
       <div class="last">${last}</div>
       <div class="tools"><button class="link" data-act="swap" data-i="${i}">Swap exercise</button><button class="link" data-act="detail" data-id="${it.ex}">History</button><button class="link danger" data-act="removefocus" data-i="${i}">Remove</button></div>
     </div>
-    <div class="fdock">${next&&!allDone?`<div class="next"><span>Next</span><b>${esc(next)}</b></div>`:""}<div id="ctaBox">${cta}</div></div>
+    <div class="fdock"><div id="ctaBox">${cta}</div></div>
   </div>`;
 }
 // Weight and reps as two separate cards (or one card of seconds for timed exercises).
+function upNextHTML(k, allDone){
+  if(allDone || k<0) return `<div class="upnext done"><div class="un-eye">All exercises done</div><div class="un-name">Nice work.</div><p class="un-sub">Finish the workout to save it and see your summary.</p></div>`;
+  const e = exById(S.plan.items[k].ex) || {name:"Unknown", group:"other"};
+  return `<div class="upnext"><div class="un-row"><div class="un-pic"><img src="${imgOf(e)}" alt=""></div>
+      <div class="un-txt"><div class="un-eye">Up next</div><div class="un-name">${esc(e.name)}</div><div class="un-sub">${esc(GROUPS[e.group]||"")}, ${S.plan.items[k].sets.length} ${S.plan.items[k].sets.length===1?"set":"sets"}</div></div></div>
+    <button class="cta un-go" data-act="jump" data-i="${k}">Go to ${esc(e.name)}</button></div>`;
+}
 function numCards(it, i, j, s){
   const fit = v => String(v??"").length>=5 ? " l5" : String(v??"").length===4 ? " l4" : "";
   const card = (cls, f, mode, val, ph, unit, label, minus, plus, ml, pl) => `<div class="num ${cls}">
@@ -1057,8 +1075,8 @@ $app.addEventListener("click", e=>{
     case "open": openFocus(i); break;
     case "start": { const k=S.plan.items.findIndex(x=>!itemState(x).all); openFocus(k<0?0:k); break; }
     case "back": focus=null; render(false); window.scrollTo(0,0); break;
-    case "jump": focus.i=i; selSet=null; howOpen=false; render(false); break;
-    case "sel": selSet=j; render(); break;
+    case "jump": focus.i=i; focus.edit=false; selSet=null; howOpen=false; render(false); window.scrollTo(0,0); break;
+    case "sel": selSet=j; focus.edit=true; render(); break;
     case "howtoggle": howOpen=!howOpen; render(); break;
     case "nudge": {
       const s=S.plan.items[focus.i].sets[selSet], f=b.dataset.f, d=+b.dataset.d;
@@ -1133,7 +1151,7 @@ $app.addEventListener("touchend", e=>{
   const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty; tx=null;
   if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
     const n=S.plan.items.length, k=focus.i+(dx<0?1:-1);
-    if(k>=0 && k<n){ focus.i=k; selSet=null; howOpen=false; render(false); }
+    if(k>=0 && k<n){ focus.i=k; focus.edit=false; selSet=null; howOpen=false; render(false); }
   }
 });
 
@@ -1200,11 +1218,13 @@ const fmtT = ms => { const s=Math.max(0,Math.ceil(ms/1000)); return Math.floor(s
 function restHTML(){
   if(!rest) return "";
   const nextSet = (selSet??0)+1;
+  const fit = focus && S.plan && S.plan.items[focus.i], exOver = fit && itemState(fit).all;
+  const restLabel = exOver ? "Rest before the next exercise" : `Rest before set ${nextSet}`;
   if(rest.over) return `<button class="cta go" data-act="restgo">Start set ${nextSet}</button>`;
   const left = rest.end-Date.now(), m = !!S.settings.mute;
   const icon = m ? '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg>';
-  return `<div class="rest" role="timer" aria-label="Rest before set ${nextSet}">
-    <div class="rest-top"><span class="rest-l">Rest before set ${nextSet}</span><span class="rest-t" id="restT">${fmtT(left)}</span></div>
+  return `<div class="rest" role="timer" aria-label="${restLabel}">
+    <div class="rest-top"><span class="rest-l">${restLabel}</span><span class="rest-t" id="restT">${fmtT(left)}</span></div>
     <div class="rest-line"><i id="restL" style="transform:scaleX(${Math.max(0,left/rest.total).toFixed(3)})"></i></div>
     <div class="rest-b"><button class="link mute" data-act="mute" aria-pressed="${!m}" aria-label="${m?"Sound off":"Sound on"}">${icon}${m?"Sound off":"Sound on"}</button><span class="sp"></span><button class="link" data-act="rest30">+30s</button><button class="link" data-act="restskip">Skip</button></div></div>`;
 }
@@ -1245,7 +1265,7 @@ function completeAt(i,j,carry=true){
   if(focus && focus.i===i){
     const nx = it.sets.findIndex(s=>!s.done);
     if(nx>=0) selSet=nx;
-    else { const k=nextPending(); if(k>=0 && k!==focus.i){ focus.i=k; selSet=null; howOpen=false; if(!pr) toast("Next exercise"); } }
+    focus.edit = false;      // all sets done → the Up next card replaces the inputs
   }
   persistPlan();
   if(!S.plan.items.every(x=>itemState(x).all)) startRest();

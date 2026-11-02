@@ -20,6 +20,10 @@
 :root{
   --bg:#F5F5F7; --s1:#FFFFFF; --s2:#E8E8ED; --line:#DCDCE1; --ink:#0B0B0D; --mut:#6E6E73; --dim:#B4B4BA;
   --pic:#121215; --neon:#1FD873; --neon-ink:#00140A; --neon-txt:#0E9F50; --neon-d:#CFEFDC; --red:#E5372B; --glow:none;
+  /* colour system: weight, reps, working countdown, rest, remove (light mode uses deeper shades) */
+  --kg:#007A8F; --kg-bg:rgba(0,122,143,.07); --reps:#7438D9; --reps-bg:rgba(116,56,217,.07);
+  --hold:#D41F1F; --hold-ink:#FFFFFF; --rest:#1F5BD6; --del:#9E3B34;
+  --flash:#0B0B0D; --rest-glow:none; --hold-glow:none;
   color-scheme:light; box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
@@ -28,6 +32,9 @@
     --bg:#000000; --s1:#0C0C0E; --s2:#16161A; --line:#1E1E22; --ink:#F5F5F7; --mut:#8A8A90; --dim:#3C3C42;
     --pic:#0C0C0E; --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
     --glow:drop-shadow(0 0 10px rgba(61,255,143,.5)) drop-shadow(0 0 2px rgba(61,255,143,.9));
+    --kg:#00E5FF; --kg-bg:rgba(0,229,255,.06); --reps:#B57BFF; --reps-bg:rgba(181,123,255,.07);
+    --hold:#FF3B3B; --hold-ink:#000000; --rest:#4D8BFF; --del:#C0605A;
+    --flash:#FFFFFF; --rest-glow:drop-shadow(0 0 8px rgba(77,139,255,.6)); --hold-glow:drop-shadow(0 0 10px rgba(255,59,59,.55));
     color-scheme:dark;
   }
 }
@@ -35,6 +42,9 @@
   --bg:#000000; --s1:#0C0C0E; --s2:#16161A; --line:#1E1E22; --ink:#F5F5F7; --mut:#8A8A90; --dim:#3C3C42;
   --pic:#0C0C0E; --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
   --glow:drop-shadow(0 0 10px rgba(61,255,143,.5)) drop-shadow(0 0 2px rgba(61,255,143,.9));
+  --kg:#00E5FF; --kg-bg:rgba(0,229,255,.06); --reps:#B57BFF; --reps-bg:rgba(181,123,255,.07);
+  --hold:#FF3B3B; --hold-ink:#000000; --rest:#4D8BFF; --del:#C0605A;
+  --flash:#FFFFFF; --rest-glow:drop-shadow(0 0 8px rgba(77,139,255,.6)); --hold-glow:drop-shadow(0 0 10px rgba(255,59,59,.55));
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -54,7 +64,7 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .lead{margin:22px 24px 0;color:var(--mut);font-size:15px;max-width:34ch}
 .link{font-size:14px;font-weight:500;color:var(--mut)}
 .link:active{color:var(--ink)}
-.danger{color:var(--red)}
+.danger{color:var(--del)}
 
 /* hero ring */
 .hero{position:relative;width:220px;height:220px;margin:18px auto 0}
@@ -114,20 +124,83 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .fpic img{display:block;width:100%;aspect-ratio:4/3;max-height:30vh;max-height:30dvh;object-fit:contain}
 .sheet-b .fpic img{max-height:38vh;max-height:38dvh}
 .more{margin-top:4px;color:var(--ink)}
-.nums{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0 0}
-.big{width:100%;border:0;background:transparent;padding:0;font-size:88px;font-weight:200;letter-spacing:-.06em;line-height:1;font-variant-numeric:tabular-nums;caret-color:var(--neon)}
-.big::placeholder{color:var(--dim)}
-.u{font-size:13px;color:var(--mut);margin-top:4px}
-.step{display:flex;gap:10px;margin-top:14px}
-.step button{width:46px;height:46px;border-radius:23px;border:1px solid var(--line);font-size:22px;font-weight:300;display:grid;place-items:center}
-.step button:active{background:var(--s2)}
+.nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:22px 0 0}
+.num{min-width:0;border-radius:22px;padding:14px 14px 14px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--line)}
+.num.kg{color:var(--kg);background:var(--kg-bg);box-shadow:inset 0 0 0 1.5px var(--kg)}
+.num.reps{color:var(--reps);background:var(--reps-bg);box-shadow:inset 0 0 0 1.5px var(--reps)}
+.num.secs{color:var(--hold)}
+.big{display:block;width:100%;min-width:0;border:0;background:transparent;color:inherit;padding:0;font-size:clamp(40px,13vw,60px);height:clamp(44px,14.3vw,66px);font-weight:300;letter-spacing:-.04em;line-height:1.05;font-variant-numeric:tabular-nums;caret-color:currentColor}
+.big.l4{font-size:clamp(34px,11vw,54px)}
+.big.l5{font-size:clamp(28px,9vw,46px)}
+.big::placeholder{color:currentColor;opacity:.35}
+.u{font-size:13px;font-weight:600;color:inherit;opacity:.85;margin-top:2px}
+.step{display:flex;gap:8px;margin-top:12px}
+.step button{flex:1;max-width:56px;height:44px;border-radius:22px;border:1.5px solid currentColor;color:inherit;font-size:22px;font-weight:400;display:grid;place-items:center}
+.kg .step button:active{background:var(--kg);color:var(--bg)}
+.reps .step button:active{background:var(--reps);color:var(--bg)}
+.secs .step button:active{background:var(--hold);color:var(--bg)}
 .sets{display:flex;flex-wrap:wrap;gap:12px;margin:32px 0 0}
 .sw{position:relative}
 .set{width:46px;height:46px;border-radius:23px;border:1.5px solid var(--neon-txt);color:var(--neon-txt);font-size:14px;font-weight:600;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .set.done{background:var(--neon);border-color:var(--neon);color:var(--neon-ink)}
+.set svg{width:20px;height:20px;stroke:currentColor}
+.set.pop{animation:pop .35s ease-out}
+@keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.sumv{flex-direction:column;align-items:flex-end;gap:2px}
+.sumv b.kgv{color:var(--kg)}
+.sumv b.repsv{color:var(--reps)}
+body.holding{overflow:hidden}
+.hov-bg{position:fixed;inset:0;z-index:50;background:rgb(0 0 0 / .72);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;justify-content:center;animation:fadein .18s ease-out}
+.hov{position:absolute;top:max(10px,env(safe-area-inset-top,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));left:10px;right:10px;max-width:500px;margin:0 auto;background:var(--bg);border:1px solid var(--line);border-radius:28px;padding:10px 18px 16px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:clamp(6px,1.6vh,14px);overflow:hidden}
+.hov-top{align-self:stretch;display:flex;align-items:center;gap:8px}
+.hov-set{flex:1;text-align:center;font-size:14px;font-weight:600;color:var(--mut)}
+.hov-sp{width:40px}
+.hov-name{font-size:clamp(22px,7vw,30px);line-height:1.15;text-align:center;letter-spacing:-.02em;margin:0;max-width:100%;overflow-wrap:anywhere}
+.hov-ring{position:relative;width:min(66vw,38vh,300px);aspect-ratio:1;flex:none}
+.hov-ring svg{display:block;width:100%;height:100%}
+.hov-ring .trk{fill:none;stroke:var(--s2);stroke-width:12}
+.hov-ring .prog{fill:none;stroke:var(--hold);stroke-width:12;stroke-linecap:round;filter:var(--hold-glow);transition:stroke-dashoffset .25s linear}
+.hov-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.hold-t{display:inline-block;font-size:clamp(44px,15vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;color:var(--hold)}
+.hov-of{font-size:13px;color:var(--mut);margin-top:6px}
+.hov-pic{flex:1 1 auto;min-height:0;max-height:min(18vh,130px);width:min(46vw,190px);border-radius:16px;background:var(--pic);overflow:hidden}
+.hov-pic img{display:block;width:100%;height:100%;object-fit:contain}
+.hov-row{display:flex;gap:28px;align-items:center}
+.hov-row .mute{display:flex;align-items:center;gap:6px}
+.hov-btns{align-self:stretch;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hov-btns .cta{height:54px;font-size:16px}
+.hov-btns .cta.ghost{border-color:var(--ink)}
+.hov .hov-btns .cta.hold-done:not(.ghost){background:var(--hold);color:var(--hold-ink);box-shadow:none}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.sm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.sm-grid div{border-radius:18px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);padding:12px 14px;min-width:0}
+.sm-grid b{display:block;font-size:28px;font-weight:300;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sm-grid span{display:block;font-size:12.5px;color:var(--mut);margin-top:4px}
+.sm-grid .kgc b{color:var(--kg)}
+.sm-grid .repsc b{color:var(--reps)}
+.sm-cmp{margin:12px 0 0;font-size:14px;color:var(--mut)}
+.sm-cmp b{color:var(--ink)}
+.sm-cmp b.good{color:var(--neon-txt)}
+.sm-h{font-size:15px;font-weight:700;margin:22px 0 0}
+.mchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.mchips span{font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:12px;background:var(--s2)}
+.hl{list-style:none;margin:10px 0 0;padding:0}
+.hl li{display:flex;gap:10px;align-items:baseline;padding:7px 0;font-size:14px;border-bottom:1px solid var(--line)}
+.hl li span:last-child{min-width:0}
+.upmark{color:var(--neon-txt);font-size:11px}
+.recs{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rec{border-radius:16px;padding:12px 14px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);font-size:14px;line-height:1.4}
+.rec b{display:block;font-size:13px;margin-bottom:2px}
+.rec.plateau{box-shadow:inset 0 0 0 1.5px var(--neon)}
+.utoast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px);background:var(--ink);color:var(--bg);padding:8px 8px 8px 16px;border-radius:22px;font-size:14px;font-weight:600;box-shadow:0 6px 24px rgb(0 0 0 / .35);animation:udrop .2s ease-out}
+.utoast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.utoast button{flex:none;height:34px;padding:0 14px;border-radius:17px;background:var(--bg);color:var(--ink);font-weight:700;font-size:14px}
+@keyframes udrop{from{transform:translate(-50%,-12px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+.rest.over .rest-t{color:var(--mut)}
+#ctaBox{display:flex;flex-direction:column;gap:10px}
 .set.cur{outline:2px solid var(--ink);outline-offset:3px}
 .set.add{border:1.5px dashed var(--dim);color:var(--mut);font-size:20px;font-weight:300}
-.setx{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:11px;background:var(--bg);border:1px solid var(--line);color:var(--red);display:grid;place-items:center}
+.setx{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:11px;background:var(--bg);border:1px solid var(--line);color:var(--del);display:grid;place-items:center}
 .setx svg{width:12px;height:12px;stroke:currentColor}
 .last{margin-top:22px;font-size:13px;color:var(--mut);line-height:1.5}
 .last b{color:var(--ink);font-weight:500}
@@ -152,24 +225,36 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .hopts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .hopts .chip{height:36px;color:var(--ink)}
 .tools{display:flex;gap:22px;margin:26px 0 0;flex-wrap:wrap}
-.fdock{position:sticky;bottom:0;padding:18px 24px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 30%)}
-.rest{border:1px solid var(--line);background:var(--s1);border-radius:24px;padding:14px 18px 12px}
+.fdock{position:sticky;bottom:0;padding:14px 24px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 30%)}
+.rest{border:1px solid var(--line);background:var(--s1);border-radius:20px;padding:10px 16px 8px}
 .rest-top{display:flex;align-items:baseline;justify-content:space-between}
 .rest-l{font-size:13px;color:var(--mut);font-weight:500}
-.rest-t{font-size:40px;font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
-.rest-line{height:3px;border-radius:2px;background:var(--s2);margin:12px 0 10px;overflow:hidden}
-.rest-line i{display:block;height:100%;background:var(--neon);transform-origin:left;filter:var(--glow)}
+.rest-t{display:inline-block;font-size:34px;font-weight:300;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;color:var(--rest);transition:color .2s}
+.rest-t.last5,.hold-t.last5{color:var(--flash);animation:pulse5 1s ease-in-out infinite}
+@keyframes pulse5{50%{opacity:.55;transform:scale(1.06)}}
+.rest-line{height:3px;border-radius:2px;background:var(--s2);margin:8px 0 6px;overflow:hidden}
+.rest-line i{display:block;height:100%;background:var(--rest);transform-origin:left;filter:var(--rest-glow)}
+.rest.hold .rest-t{color:var(--hold)}
+.rest.hold .rest-line i{background:var(--hold);filter:var(--hold-glow)}
 .rest-b{display:flex;align-items:center;gap:22px}
 .rest-b .sp{flex:1}
 .rest-b .mute{display:flex;align-items:center;gap:6px}
 .rest-b .mute svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nums.one{grid-template-columns:1fr}
-.nums.one .step button{width:auto;padding:0 18px;font-size:16px;font-weight:500}
+.nums.one .step button{max-width:none;padding:0 18px;font-size:16px;font-weight:600}
 .cta.go{animation:go 1.2s ease-in-out infinite}
 @keyframes go{50%{box-shadow:0 0 38px rgba(61,255,143,.65);transform:scale(1.015)}}
-@media (prefers-reduced-motion:reduce){.cta.go{animation:none}}
-.next{display:flex;justify-content:space-between;gap:16px;font-size:13px;color:var(--mut);margin-bottom:14px}
-.next b{color:var(--ink);font-weight:500;text-align:right}
+@media (prefers-reduced-motion:reduce){.cta.go,.set.pop,.utoast,.rest-t.last5,.hold-t.last5,.hov-bg{animation:none}.hov-ring .prog{transition:none}}
+.upnext{margin:22px 0 0;padding:16px;border-radius:24px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--neon)}
+.upnext.done{box-shadow:inset 0 0 0 1.5px var(--line)}
+.un-row{display:flex;gap:14px;align-items:center;min-width:0}
+.un-pic{flex:none;width:96px;height:72px;border-radius:16px;background:var(--pic);overflow:hidden}
+.un-pic img{display:block;width:100%;height:100%;object-fit:contain}
+.un-txt{min-width:0}
+.un-eye{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--neon-txt)}
+.un-name{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-top:3px;overflow-wrap:anywhere}
+.un-sub{font-size:13px;color:var(--mut);margin:4px 0 0}
+.cta.un-go{margin-top:16px;height:52px;font-size:16px;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:52px;text-align:center}
 
 /* exercises */
 .search{width:100%;height:46px;border-radius:23px;border:1px solid var(--line);background:var(--s1);padding:0 18px}
@@ -792,17 +877,13 @@ function viewFocus(){
   const sg = suggestion(it.ex), hint = overloadHint(it.ex, !!it.plateauOff);
   const last = sg.last ? `Last time<br><b>${esc(setSummary(sg.last))}</b>` : sg.tmpl ? `From your sheet<br><b>${esc(fmtV(it.ex,sg.w))}</b>` : `First time`;
   const segs = items.map((x,k)=>`<button class="sg ${itemState(x).all?"d":""} ${k===i?"c":""}" data-act="jump" data-i="${k}" aria-label="Exercise ${k+1}"></button>`).join("");
-  const circles = it.sets.map((x,k)=>`<span class="sw"><button class="set ${x.done?"done":""} ${k===j?"cur":""}" data-act="sel" data-j="${k}" aria-label="Set ${k+1}${x.done?", done":""}${x.pr?", personal record":""}">${k+1}</button>${x.pr?`<span class="prdot" aria-hidden="true">PR</span>`:""}${k>=3?`<button class="setx" data-act="delsetj" data-i="${i}" data-j="${k}" aria-label="Delete set ${k+1}">${ICON.x}</button>`:""}</span>`).join("")
+  const circles = it.sets.map((x,k)=>`<span class="sw"><button class="set ${x.done?"done":""} ${k===j&&(!x.done||focus.edit)?"cur":""} ${justDone&&justDone.i===i&&justDone.j===k?"pop":""}" data-act="sel" data-j="${k}" aria-label="Set ${k+1}${x.done?", done":""}${x.pr?", personal record":""}">${x.done?ICON.check:k+1}</button>${x.pr?`<span class="prdot" aria-hidden="true">PR</span>`:""}${k>=3?`<button class="setx" data-act="delsetj" data-i="${i}" data-j="${k}" aria-label="Delete set ${k+1}">${ICON.x}</button>`:""}</span>`).join("")
     + `<button class="set add" data-act="addset" data-i="${i}" aria-label="Add set">+</button>`;
   const allDone = items.every(x=>itemState(x).all);
-  const nextI = items.findIndex((x,k)=>k>i && !itemState(x).all);
-  const next = nextI>=0 ? exById(items[nextI].ex)?.name : (items.findIndex(x=>!itemState(x).all)>=0 ? exById(items[items.findIndex(x=>!itemState(x).all)].ex)?.name : null);
-  let cta;
-  if(hold) cta = holdHTML();
-  else if(rest && !allDone) cta = restHTML();
-  else if(allDone) cta = `<button class="cta" data-act="finish">Finish workout</button>`;
-  else if(s.done) cta = `<button class="cta ghost" data-act="undo">Undo set ${j+1}</button>`;
-  else cta = isTimed(it.ex) ? `<button class="cta" data-act="hold">Start ${esc(+s.w||30)} s</button>` : `<button class="cta" data-act="complete">Complete set ${j+1}</button>`;
+  const exDone = itemState(it).all && !focus.edit;
+  const nextI = nextPending();
+  const upNext = exDone ? upNextHTML(nextI, allDone) : "";
+  const cta = dockHTML();
   return `<div class="focus" data-swipe>
     <div class="ftop"><button class="iconbtn" data-act="back" aria-label="Back to today">${ICON.x}</button><div class="segs">${segs}</div><span class="cnt">${i+1}/${items.length}</span></div>
     <div class="fbody">
@@ -810,20 +891,54 @@ function viewFocus(){
       <h2 class="fname">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge">New PR</span>`:""}</h2>
       ${picHTML(e)}
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(e.desc)}</p><button class="link more" data-act="howtoggle">${howOpen?"Show less":"Show more"}</button>`:""}
-      ${hint?`<div class="hint${hint.plateau?" plateau":""}">${hint.plateau?`<button class="iconbtn hx" data-act="plateauoff" data-i="${i}" aria-label="Dismiss for this workout">${ICON.x}</button><span class="up">${esc(hint.text)}</span>`:`<span class="up">Last time ${esc(hint.last)}</span>, ${esc(hint.text)}`}<div class="hopts">${hint.opts.map(o=>`<button class="chip" data-act="usehint" data-w="${o.w??""}" data-r="${o.r??""}">${esc(o.label)}</button>`).join("")}</div></div>`:""}
-      ${isTimed(it.ex) ? `<div class="nums one"><div class="num"><input class="big" inputmode="numeric" data-f="w" data-i="${i}" data-j="${j}" value="${esc(s.w)}" placeholder="30" aria-label="Seconds"><div class="u">seconds</div>
-          <div class="step"><button data-act="nudge" data-f="w" data-d="-1" aria-label="5 seconds less">−5</button><button data-act="nudge" data-f="w" data-d="1" aria-label="5 seconds more">+5</button></div></div></div>` : `<div class="nums">
-        <div class="num"><input class="big" inputmode="decimal" data-f="w" data-i="${i}" data-j="${j}" value="${esc(s.w)}" placeholder="0" aria-label="Weight in kg"><div class="u">kg</div>
-          <div class="step"><button data-act="nudge" data-f="w" data-d="-1" aria-label="Less weight">−</button><button data-act="nudge" data-f="w" data-d="1" aria-label="More weight">+</button></div></div>
-        <div class="num"><input class="big" inputmode="numeric" data-f="r" data-i="${i}" data-j="${j}" value="${esc(s.r)}" placeholder="0" aria-label="Reps"><div class="u">reps</div>
-          <div class="step"><button data-act="nudge" data-f="r" data-d="-1" aria-label="Fewer reps">−</button><button data-act="nudge" data-f="r" data-d="1" aria-label="More reps">+</button></div></div>
-      </div>`}
+      ${upNext}
+      ${!exDone && hint?`<div class="hint${hint.plateau?" plateau":""}">${hint.plateau?`<button class="iconbtn hx" data-act="plateauoff" data-i="${i}" aria-label="Dismiss for this workout">${ICON.x}</button><span class="up">${esc(hint.text)}</span>`:`<span class="up">Last time ${esc(hint.last)}</span>, ${esc(hint.text)}`}<div class="hopts">${hint.opts.map(o=>`<button class="chip" data-act="usehint" data-w="${o.w??""}" data-r="${o.r??""}">${esc(o.label)}</button>`).join("")}</div></div>`:""}
+      ${exDone ? "" : numCards(it, i, j, s)}
       <div class="sets">${circles}</div>
       <div class="last">${last}</div>
       <div class="tools"><button class="link" data-act="swap" data-i="${i}">Swap exercise</button><button class="link" data-act="detail" data-id="${it.ex}">History</button><button class="link danger" data-act="removefocus" data-i="${i}">Remove</button></div>
     </div>
-    <div class="fdock">${next&&!allDone?`<div class="next"><span>Next</span><b>${esc(next)}</b></div>`:""}<div id="ctaBox">${cta}</div></div>
+    <div class="fdock"><div id="ctaBox">${cta}</div></div>
   </div>`;
+}
+// Weight and reps as two separate cards (or one card of seconds for timed exercises).
+// What the primary button does for the current set.
+function doneLabel(){
+  const it = S.plan.items[focus.i], j = selSet ?? 0, s = it.sets[j];
+  const left = it.sets.filter(x=>!x.done).length;
+  const others = S.plan.items.some((x,k)=>k!==focus.i && !itemState(x).all);
+  if(!s || s.done) return null;
+  if(isTimed(it.ex)) return {act:"hold", text:`Start set ${j+1} · ${+s.w||30} s`};
+  if(left<=1) return others ? {act:"done", text:"Finish exercise"} : {act:"done", text:"Finish workout"};
+  return {act:"done", text:`Done, set ${j+1}`};
+}
+function dockHTML(){
+  if(!focus || !S.plan) return "";
+  if(hold) return holdHTML();
+  const it = S.plan.items[focus.i], allDone = S.plan.items.every(x=>itemState(x).all);
+  const timer = rest && !allDone ? restHTML() : "";
+  if(allDone) return `<button class="cta" data-act="finish">Finish workout</button>`;
+  if(itemState(it).all && !focus.edit) return timer;                    // the Up next card has the button
+  const s = it.sets[selSet ?? 0];
+  if(s && s.done) return timer + `<button class="cta ghost" data-act="editdone">Done editing set ${(selSet??0)+1}</button>`;
+  const d = doneLabel();
+  return timer + (d ? `<button class="cta" data-act="${d.act}">${esc(d.text)}</button>` : "");
+}
+function upNextHTML(k, allDone){
+  if(allDone || k<0) return `<div class="upnext done"><div class="un-eye">All exercises done</div><div class="un-name">Nice work.</div><p class="un-sub">Finish the workout to save it and see your summary.</p></div>`;
+  const e = exById(S.plan.items[k].ex) || {name:"Unknown", group:"other"};
+  return `<div class="upnext"><div class="un-row"><div class="un-pic"><img src="${imgOf(e)}" alt=""></div>
+      <div class="un-txt"><div class="un-eye">Up next</div><div class="un-name">${esc(e.name)}</div><div class="un-sub">${esc(GROUPS[e.group]||"")}, ${S.plan.items[k].sets.length} ${S.plan.items[k].sets.length===1?"set":"sets"}</div></div></div>
+    <button class="cta un-go" data-act="jump" data-i="${k}">Go to ${esc(e.name)}</button></div>`;
+}
+function numCards(it, i, j, s){
+  const fit = v => String(v??"").length>=5 ? " l5" : String(v??"").length===4 ? " l4" : "";
+  const card = (cls, f, mode, val, ph, unit, label, minus, plus, ml, pl) => `<div class="num ${cls}">
+      <input class="big${fit(val)}" inputmode="${mode}" data-f="${f}" data-i="${i}" data-j="${j}" value="${esc(val)}" placeholder="${ph}" aria-label="${label}">
+      <div class="u">${unit}</div>
+      <div class="step"><button data-act="nudge" data-f="${f}" data-d="-1" aria-label="${ml}">${minus}</button><button data-act="nudge" data-f="${f}" data-d="1" aria-label="${pl}">${plus}</button></div></div>`;
+  if(isTimed(it.ex)) return `<div class="nums one">${card("secs","w","numeric",s.w,"30","seconds","Seconds","−5","+5","5 seconds less","5 seconds more")}</div>`;
+  return `<div class="nums">${card("kg","w","decimal",s.w,"0","kg","Weight in kg","−","+","Less weight","More weight")}${card("reps","r","numeric",s.r,"0","reps","Reps","−","+","Fewer reps","More reps")}</div>`;
 }
 function exStats(){
   const st = {};
@@ -852,6 +967,7 @@ function viewHistory(){
     <div class="stats"><div><b>${p.total}</b><span>workouts</span></div><div class="n"><b>${stk}</b><span>week streak</span></div><div><b>${p.month}</b><span>this month</span></div></div>
     <div class="weeks" role="img" aria-label="Workouts per week over the last 12 weeks">${grid}</div>
     <div class="wl"><span>12 weeks ago</span><span>This week</span></div>
+    ${summariesSection()}
     <div class="list"><button class="row" data-act="prs"><span class="nm">Personal records<small>${Object.keys(computePRs()).length} exercises with a best</small></span><span class="m"><span class="prbadge sm">PR</span></span></button></div>
     <section class="list">${ss.map(s=>`<details class="sess"><summary><span><b>${esc(sessionTitle(s))}</b><small>${esc(s.date?fmtDate(s.date):"Before the app")}${s.nogym?" · No gym":""}</small></span><span class="m">${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></summary>
       <ul>${s.items.map(it=>`<li><span>${esc(exById(it.ex)?.name||"Unknown")}</span><span>${esc(setSummary(it))}</span></li>`).join("")}</ul>
@@ -918,6 +1034,10 @@ function viewSheet(){
     const list=(S.plan?.nogym ? nogymExercises() : gymExercises()).filter(e=>!inPlan.has(e.id)&&(!q||e.name.toLowerCase().includes(q)));
     return wrap("Add exercise","Add exercise",`<input class="search" type="search" placeholder="Search" data-f="pq" value="${esc(sheet.q||"")}" aria-label="Search exercises">
       <div class="list">${list.map(e=>`<button class="row" data-act="addthis" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${GROUPS[e.group]}</small></span></button>`).join("")}</div>`);
+  }
+  if(sheet.type==="summary"){
+    const sess = S.sessions.find(x=>x.id===sheet.id); if(!sess) return "";
+    return wrap("Workout summary","Workout summary", summaryHTML(sess) + `<button class="cta wide" data-act="close">Done</button>`);
   }
   if(sheet.type==="prs"){
     const prs = computePRs(), when = s => s.date ? fmtDate(s.date) : "Before the app";
@@ -1000,7 +1120,8 @@ function render(keepScroll=true){
   const y = window.scrollY;
   if(focus && (!S.plan || !S.plan.items[focus.i])) focus = null;
   document.body.classList.toggle("focusing", !!focus);
-  $app.innerHTML = (focus ? viewFocus() : tab==="today"?viewToday():tab==="exercises"?viewExercises():tab==="body"?viewBody():viewHistory()) + viewSheet();
+  document.body.classList.toggle("holding", !!(focus && hold));
+  $app.innerHTML = (focus ? viewFocus() + holdOverlay() : tab==="today"?viewToday():tab==="exercises"?viewExercises():tab==="body"?viewBody():viewHistory()) + viewSheet();
   document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===tab?"page":"false"));
   if(keepScroll) window.scrollTo(0,y);
 }
@@ -1038,8 +1159,8 @@ $app.addEventListener("click", e=>{
     case "open": openFocus(i); break;
     case "start": { const k=S.plan.items.findIndex(x=>!itemState(x).all); openFocus(k<0?0:k); break; }
     case "back": focus=null; render(false); window.scrollTo(0,0); break;
-    case "jump": focus.i=i; selSet=null; howOpen=false; render(false); break;
-    case "sel": selSet=j; render(); break;
+    case "jump": focus.i=i; focus.edit=false; selSet=null; howOpen=false; render(false); window.scrollTo(0,0); break;
+    case "sel": selSet=j; focus.edit=true; render(); break;
     case "howtoggle": howOpen=!howOpen; render(); break;
     case "nudge": {
       const s=S.plan.items[focus.i].sets[selSet], f=b.dataset.f, d=+b.dataset.d;
@@ -1047,15 +1168,19 @@ $app.addEventListener("click", e=>{
       else if(f==="w"){ const v=+s.w||0; const st=(d>0? v>=20 : v>20)?2.5:1; s.w = Math.max(0, Math.round((v + d*st)*10)/10); }
       else s.r = Math.max(0, (+s.r||0) + d);
       persistPlan(); render(); break; }
-    case "complete": completeAt(focus.i, selSet); render(false); window.scrollTo(0,0); break;
+    case "complete": case "done": doneSet(); break;
+    case "editdone": { focus.edit=false; const k=S.plan.items[focus.i].sets.findIndex(x=>!x.done); selSet = k<0 ? null : k; render(); break; }
+    case "undolast": undoLast(); break;
     case "hold": { unlockAudio(); const s=S.plan.items[focus.i].sets[selSet], ms=(+s.w||30)*1000; s.w=+s.w||30;
-      rest=null; hold={end:Date.now()+ms, total:ms, start:Date.now(), i:focus.i, j:selSet}; holdWake(); persistPlan(); render(); break; }
-    case "holdstop": if(hold){ const h=hold; hold=null; const secs=Math.max(1,Math.round((Date.now()-h.start)/1000)); S.plan.items[h.i].sets[h.j].w=secs; completeAt(h.i,h.j,false); render(false); } break;
+      rest=null; hold={total:ms, elapsed:0, runStart:Date.now(), paused:false, i:focus.i, j:selSet}; holdWake(); persistPlan(); render(); break; }
+    case "holdpause": if(hold){ if(hold.paused){ hold.runStart=Date.now(); hold.paused=false; holdWake(); } else { hold.elapsed=heldMs(); hold.paused=true; releaseWake(); } render(); } break;
+    case "hold10": if(hold){ hold.total += 10000; tickHold(); } break;
+    case "holdstop": if(hold) endHold(Math.max(1, Math.round(heldMs()/1000)), false); break;
     case "holdcancel": hold=null; releaseWake(); render(); break;
-    case "restskip": if(rest){ rest.over=true; releaseWake(); render(); } break;
+    case "restskip": if(rest){ rest=null; releaseWake(); render(); } break;
     case "rest30": if(rest && !rest.over){ rest.end+=30000; rest.total+=30000; tickRest(); } break;
-    case "restgo": rest=null; render(); break;
-    case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=restHTML(); break;
+    case "restgo": rest=null; render(); break;   // kept for any old screen still showing it
+    case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(hold) render(); else if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=dockHTML(); break;
     case "plateauoff": S.plan.items[i].plateauOff = true; persistPlan(); render(); break;
     case "usehint": {
       const it=S.plan.items[focus.i], w=b.dataset.w, r=b.dataset.r;
@@ -1084,6 +1209,8 @@ $app.addEventListener("click", e=>{
     case "export": exportBackup(); break;
     case "import": document.getElementById("restore").click(); break;
     case "prs": sheet={type:"prs"}; render(); break;
+    case "summary": sheet={type:"summary", id:b.dataset.id}; render(); break;
+    case "sumall": showAllSummaries=!showAllSummaries; render(); break;
     case "weighin": sheet={type:"weighin"}; render(); setTimeout(()=>document.getElementById("wi-w")?.focus(),60); break;
     case "editwi": sheet={type:"weighin", id:b.dataset.id}; render(); break;
     case "wisnooze": S.settings.wiSnooze=ymd(new Date()); persistSettings(); render(); break;
@@ -1108,24 +1235,29 @@ $app.addEventListener("click", e=>{
 });
 // swipe between exercises in focus mode
 let tx=null, ty=null;
-$app.addEventListener("touchstart", e=>{ if(!focus || e.target.closest("input,button")) { tx=null; return; } tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, {passive:true});
+$app.addEventListener("touchstart", e=>{ if(!focus || hold || e.target.closest("input,button")) { tx=null; return; } tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, {passive:true});
 $app.addEventListener("touchend", e=>{
   if(tx===null || !focus) return;
   const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty; tx=null;
   if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
     const n=S.plan.items.length, k=focus.i+(dx<0?1:-1);
-    if(k>=0 && k<n){ focus.i=k; selSet=null; howOpen=false; render(false); }
+    if(k>=0 && k<n){ focus.i=k; focus.edit=false; selSet=null; howOpen=false; render(false); }
   }
 });
 
-function finish(){
+function finish(fromDone=false){
   const prs = S.plan.items.reduce((n,it)=>n+it.sets.filter(s=>s.done&&s.pr).length,0);
   const items = S.plan.items.map(it=>({ex:it.ex, sets:it.sets.filter(s=>s.done).map(s=>({w:+s.w||0, r:+s.r||0}))})).filter(it=>it.sets.length);
   if(!items.length) return toast("Complete at least one set first");
   const s = {id:Date.now().toString(36), date:new Date().toISOString(), items, v:2};
   if(S.plan.nogym) s.nogym = true;
-  S.sessions.push(s); S.plan=null; nogymNext=false; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
-  render(false); window.scrollTo(0,0); toast(`Workout ${S.sessions.length} saved`+(prs?`, ${prs} new PR${prs>1?"s":""}`:""));
+  const started = S.plan.started || null, ended = Date.now();
+  S.sessions.push(s);
+  s.summary = Object.assign(buildSummary(s, true), {started, ended, durMin: started ? Math.max(1, Math.round((ended-started)/60000)) : null});
+  sheet = {type:"summary", id:s.id};
+  S.plan=null; nogymNext=false; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
+  render(false); window.scrollTo(0,0); if(!fromDone) toast(`Workout ${S.sessions.length} saved`+(prs?`, ${prs} new PR${prs>1?"s":""}`:""));
+  return s;
 }
 async function exportBackup(){
   const data = JSON.stringify({app:"training-log",version:2,exported:new Date().toISOString(),
@@ -1181,11 +1313,13 @@ const fmtT = ms => { const s=Math.max(0,Math.ceil(ms/1000)); return Math.floor(s
 function restHTML(){
   if(!rest) return "";
   const nextSet = (selSet??0)+1;
-  if(rest.over) return `<button class="cta go" data-act="restgo">Start set ${nextSet}</button>`;
+  const fit = focus && S.plan && S.plan.items[focus.i], exOver = fit && itemState(fit).all;
+  const restLabel = exOver ? "Rest before the next exercise" : `Rest before set ${nextSet}`;
+  if(rest.over) return `<div class="rest over" role="status"><div class="rest-top"><span class="rest-l">Rest over</span><span class="rest-t">0:00</span></div></div>`;
   const left = rest.end-Date.now(), m = !!S.settings.mute;
   const icon = m ? '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg>';
-  return `<div class="rest" role="timer" aria-label="Rest before set ${nextSet}">
-    <div class="rest-top"><span class="rest-l">Rest before set ${nextSet}</span><span class="rest-t" id="restT">${fmtT(left)}</span></div>
+  return `<div class="rest" role="timer" aria-label="${restLabel}">
+    <div class="rest-top"><span class="rest-l">${restLabel}</span><span class="rest-t${left<=5000?" last5":""}" id="restT">${fmtT(left)}</span></div>
     <div class="rest-line"><i id="restL" style="transform:scaleX(${Math.max(0,left/rest.total).toFixed(3)})"></i></div>
     <div class="rest-b"><button class="link mute" data-act="mute" aria-pressed="${!m}" aria-label="${m?"Sound off":"Sound on"}">${icon}${m?"Sound off":"Sound on"}</button><span class="sp"></span><button class="link" data-act="rest30">+30s</button><button class="link" data-act="restskip">Skip</button></div></div>`;
 }
@@ -1215,41 +1349,224 @@ function restOver(){
   ding();
   try{ navigator.vibrate && navigator.vibrate([250,120,250]); }catch(_){}
   const box = document.getElementById("ctaBox");
-  if(focus && box) box.innerHTML = restHTML();
+  if(focus && box) box.innerHTML = dockHTML();
   else toast("Rest is over. Time for the next set");
+}
+/* ---------- workout summary ---------- */
+function priorSessions(sess){ const all = allSessions(), k = all.findIndex(x=>x.id===sess.id); return k<0 ? all : all.slice(0,k); }
+const fmtDur = m => m==null ? "–" : m<60 ? `${m} min` : `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")} min`;
+const topSet = it => it.sets.reduce((a,x)=>(+x.w||0)>(+a.w||0) || ((+x.w||0)===(+a.w||0) && (+x.r||0)>(+a.r||0)) ? x : a, it.sets[0]||{w:0,r:0});
+function sessionStats(sess){
+  let sets=0, volume=0, reps=0, secs=0; const ms = [];
+  sess.items.forEach(it=>{ sets += it.sets.length;
+    musclesOf(it.ex).forEach(m=>{ if(!ms.includes(m)) ms.push(m); });
+    it.sets.forEach(x=>{ if(isTimed(it.ex)) secs += +x.w||0; else { reps += +x.r||0; volume += (+x.w||0)*(+x.r||0); } }); });
+  return {exercises:sess.items.length, sets, volume:Math.round(volume), reps, secs, muscles:ms};
+}
+// PRs and improvements in one workout, judged only against what came before it.
+function sessionHighlights(sess, prior){
+  const prs = [], ups = [], missed = [];
+  sess.items.forEach(it=>{
+    const prevItems = []; prior.forEach(x=>x.items.forEach(y=>{ if(y.ex===it.ex) prevItems.push(y); }));
+    if(!prevItems.length) return;
+    const name = exById(it.ex)?.name || "Unknown", timed = isTimed(it.ex);
+    const pool = []; prevItems.forEach(y=>y.sets.forEach(x=>pool.push({w:+x.w||0, r:+x.r||0})));
+    let best = null;
+    it.sets.forEach(x=>{ const w=+x.w||0, r=+x.r||0; let hit=null;
+      if(timed){ if(w > Math.max(...pool.map(p=>p.w))) hit = `${w} s hold`; }
+      else if(w>0 && w > Math.max(...pool.map(p=>p.w))) hit = `${r1(w)} kg × ${r}`;
+      else { const at = pool.filter(p=>p.w>=w); if(r>0 && at.length && r > Math.max(...at.map(p=>p.r))) hit = w ? `${r} reps at ${r1(w)} kg` : `${r} reps`; }
+      if(hit) best = hit; pool.push({w, r}); });
+    if(best) prs.push({ex:it.ex, name, label:best});
+    const last = prevItems[prevItems.length-1], a = topSet(it), b = topSet(last);
+    const aw=+a.w||0, ar=+a.r||0, bw=+b.w||0, br=+b.r||0;
+    if(timed){ if(aw>bw) ups.push({ex:it.ex, name, text:`${aw} s, up from ${bw} s`}); return; }
+    if(aw>bw) ups.push({ex:it.ex, name, text:`${r1(aw)} kg, up from ${r1(bw)} kg`});
+    else if(aw===bw && ar>br) ups.push({ex:it.ex, name, text:`${ar} reps${aw?` at ${r1(aw)} kg`:""}, up from ${br}`});
+    else if(aw===bw && ar<br) missed.push({ex:it.ex, name, w:aw, r:ar, lastR:br});
+  });
+  return {prs, ups, missed};
+}
+// Most recent earlier workout that trained mostly the same muscles (same gym / no-gym kind).
+function similarWorkout(sess, prior){
+  const main = new Set(sess.items.map(it=>musclesOf(it.ex)[0]).filter(Boolean));
+  const cands = prior.filter(x=>x.date && !!x.nogym===!!sess.nogym).reverse();
+  const score = x => { const m = new Set(x.items.map(it=>musclesOf(it.ex)[0]).filter(Boolean)); const inter=[...m].filter(k=>main.has(k)).length; return inter/(new Set([...m,...main]).size||1); };
+  return cands.find(x=>score(x)>=.4) || cands.find(x=>score(x)>0) || null;
+}
+function buildSummary(sess, withRecs){
+  const prior = priorSessions(sess), st = sessionStats(sess), hl = sessionHighlights(sess, prior);
+  const sim = similarWorkout(sess, prior);
+  let compare = null;
+  if(sim){ const ps = sessionStats(sim), useVol = st.volume>0 && ps.volume>0;
+    const a = useVol ? st.volume : st.reps, b = useVol ? ps.volume : ps.reps;
+    if(b>0) compare = {id:sim.id, date:sim.date, metric: useVol?"volume":"reps", pct: Math.round((a-b)/b*100), prev:b}; }
+  const out = {v:1, ...st, prs:hl.prs, ups:hl.ups, compare};
+  if(withRecs) out.recs = recommendations(sess, hl);
+  return out;
+}
+// Rule-based tips from your own history, most useful first, at most 4.
+function recommendations(sess, hl){
+  const recs = [];
+  const missedEx = new Set(hl.missed.map(m=>m.ex));      // reps dropped today: don't push the weight yet
+  sess.items.forEach(it=>{ if(recs.length>=2 || missedEx.has(it.ex)) return; const pl = plateauOf(it.ex), h = pl && overloadHint(it.ex);
+    if(h && h.plateau) recs.push({kind:"plateau", title:exById(it.ex)?.name||"", text:h.text}); });
+  hl.missed.slice(0,2).forEach(m=>recs.push({kind:"missed", title:m.name,
+    text: m.w ? `${m.r} reps at ${r1(m.w)} kg today, ${m.lastR} last time. Keep ${r1(m.w)} kg next time and aim for ${m.lastR}.` : `${m.r} reps today, ${m.lastR} last time. Aim for ${m.lastR} again next time.`}));
+  const dated = S.sessions.filter(x=>x.date);
+  if(dated.length>=3){
+    const lastHit = {}; dated.forEach(x=>x.items.forEach(it=>musclesOf(it.ex).forEach(m=>{ const t=new Date(x.date).getTime(); if(!lastHit[m]||t>lastHit[m]) lastHit[m]=t; })));
+    const cut = Date.now()-7*864e5, stale = Object.keys(MUSCLES).filter(m=>!lastHit[m] || lastHit[m]<cut);
+    if(stale.length) recs.push({kind:"muscles", title:"Next workout", text:`Not trained in 7+ days: ${muscleNames(stale).slice(0,4).join(", ")}. Worth including next time.`});
+  }
+  const due = weighInDue();
+  if(due) recs.push({kind:"weigh", title:"Weigh-in", text: due.first ? "Log your first weigh-in to start your weight chart." : `Your last weigh-in was ${due.days} days ago. A quick one keeps your chart up to date.`});
+  return recs.slice(0,4);
+}
+// Summaries for workouts from before this feature are rebuilt from their logged sets (never written back).
+let _sumCache = {key:"", map:{}};
+function summaryOf(sess){
+  if(sess.summary) return sess.summary;
+  const key = S.sessions.length+":"+(S.sessions[S.sessions.length-1]?.id||"");
+  if(_sumCache.key!==key) _sumCache = {key, map:{}};
+  return _sumCache.map[sess.id] || (_sumCache.map[sess.id] = buildSummary(sess, false));
+}
+let showAllSummaries = false;
+function summariesSection(){
+  const list = S.sessions.filter(x=>x.date).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!list.length) return "";
+  const shown = showAllSummaries ? list : list.slice(0,5);
+  return `<section class="list"><div class="sec"><span>Summaries</span>${list.length>5?`<button class="link" data-act="sumall">${showAllSummaries?"Show fewer":`Show all ${list.length}`}</button>`:""}</div>
+    ${shown.map(x=>{ const sm = summaryOf(x), vol = sm.volume>0;
+      return `<button class="row" data-act="summary" data-id="${esc(x.id)}"><span class="nm">${esc(sessionTitle(x))}${sm.prs.length?` <span class="prbadge sm">${sm.prs.length} PR${sm.prs.length>1?"s":""}</span>`:""}<small>${esc(fmtDate(x.date))}${x.nogym?" · No gym":""}</small></span>
+        <span class="m sumv"><span>${esc(fmtDur(sm.durMin))}</span><b class="${vol?"kgv":"repsv"}">${vol?sm.volume.toLocaleString()+" kg":sm.reps+" reps"}</b></span></button>`; }).join("")}
+  </section>`;
+}
+function summaryHTML(sess){
+  const sm = summaryOf(sess), title = sessionTitle(sess);
+  const vol = sm.volume>0;
+  const cmp = sm.compare ? (()=>{ const ref = S.sessions.find(x=>x.id===sm.compare.id); const nm = ref ? sessionTitle(ref) : "your last similar workout";
+    const sign = sm.compare.pct>0?"+":sm.compare.pct<0?"−":"±";
+    return `<p class="sm-cmp"><b class="${sm.compare.pct>0?"good":""}">${sign}${Math.abs(sm.compare.pct)}%</b> ${sm.compare.metric} vs ${esc(nm)}${sm.compare.date?`, ${esc(fmtDate(sm.compare.date))}`:""}</p>`; })() : `<p class="sm-cmp">No similar earlier workout to compare with yet.</p>`;
+  const hl = sm.prs.map(x=>`<li><span class="prbadge sm">PR</span><span><b>${esc(x.name)}</b> ${esc(x.label)}</span></li>`).join("")
+    + sm.ups.filter(u=>!sm.prs.some(p=>p.ex===u.ex)).map(x=>`<li><span class="upmark" aria-hidden="true">▲</span><span><b>${esc(x.name)}</b> ${esc(x.text)}</span></li>`).join("");
+  const recs = sm.recs ? (sm.recs.length ? `<h3 class="sm-h">Recommendations</h3><ol class="recs">${sm.recs.map(r=>`<li class="rec ${r.kind}"><b>${esc(r.title)}</b><span>${esc(r.text)}</span></li>`).join("")}</ol>` : `<h3 class="sm-h">Recommendations</h3><p class="fine">Nothing to change. Keep going.</p>`) : `<p class="fine">Recommendations are only made for workouts finished after summaries were added.</p>`;
+  return `<p class="how open">${esc(title)}${sess.date?`, ${esc(fmtDate(sess.date))}`:""}${sess.nogym?" · No gym":""}</p>
+    <div class="sm-grid">
+      <div><b>${esc(fmtDur(sm.durMin))}</b><span>duration</span></div>
+      <div><b>${sm.exercises}</b><span>exercises</span></div>
+      <div><b>${sm.sets}</b><span>sets</span></div>
+      <div class="${vol?"kgc":"repsc"}"><b>${vol?sm.volume.toLocaleString():sm.reps}</b><span>${vol?"kg volume":"total reps"}</span></div>
+    </div>
+    ${cmp}
+    <h3 class="sm-h">Muscles trained</h3><div class="mchips">${muscleNames(sm.muscles).map(m=>`<span>${esc(m)}</span>`).join("")}</div>
+    <h3 class="sm-h">Highlights</h3>${hl?`<ul class="hl">${hl}</ul>`:`<p class="fine">No PRs or step-ups this time. Steady work counts too.</p>`}
+    ${recs}`;
+}
+
+/* ---------- Done button + undo ---------- */
+let undoState = null, undoTimer = null, justDone = null;
+function snapshotForUndo(label){
+  undoState = {plan: JSON.parse(JSON.stringify(S.plan)), focus: focus ? {...focus} : null, selSet, rest: rest ? {...rest} : null, session: null, tab};
+  return label;
+}
+function doneSet(){
+  if(!focus || !S.plan) return;
+  const i = focus.i, it = S.plan.items[i], j = selSet ?? it.sets.findIndex(x=>!x.done);
+  if(j<0 || !it.sets[j] || it.sets[j].done) return;
+  const label = doneLabel()?.text || "";
+  const v = it.sets[j];
+  snapshotForUndo();
+  completeAt(i, j);
+  justDone = {i, j};
+  try{ navigator.vibrate && navigator.vibrate(35); }catch(_){}
+  const what = isTimed(it.ex) ? `${+v.w||0} s` : `${+v.w ? r1(+v.w)+" kg × " : ""}${+v.r||0}${+v.w?"":" reps"}`;
+  if(label==="Finish workout"){
+    const sess = finish(true);
+    if(sess){ undoState.session = sess.id; showUndo(`Set ${j+1} logged, workout saved`); }
+    return;
+  }
+  render(false);
+  setTimeout(()=>{ justDone = null; }, 400);
+  showUndo(`Set ${j+1} logged: ${what}`);
+}
+function showUndo(msg){
+  document.querySelector(".utoast")?.remove(); clearTimeout(undoTimer);
+  const t = document.createElement("div"); t.className = "utoast"; t.setAttribute("role","status");
+  t.innerHTML = `<span>${esc(msg)}</span><button type="button">Undo</button>`;
+  t.querySelector("button").addEventListener("click", undoLast);
+  document.body.appendChild(t);
+  undoTimer = setTimeout(()=>{ t.remove(); undoState = null; }, 5000);
+}
+function undoLast(){
+  const u = undoState; if(!u) return;
+  undoState = null; clearTimeout(undoTimer); document.querySelector(".utoast")?.remove();
+  if(u.session){                                   // the workout was just saved: take it back out
+    S.sessions = S.sessions.filter(x=>x.id!==u.session);
+    if(db) ref("s-"+u.session).delete().catch(()=>{});
+    sheet = null; tab = u.tab;
+  }
+  S.plan = u.plan; focus = u.focus; selSet = u.selSet; rest = null; justDone = null; releaseWake();
+  persistPlan(); saveLocal(); render(false); toast("Undone");
 }
 function completeAt(i,j,carry=true){
   const it=S.plan.items[i]; if(!it || !it.sets[j]) return;
   const cs=it.sets[j]; cs.done=true;
+  if(!S.plan.started) S.plan.started = Date.now();
   const pr = prFor(i,j); if(pr){ cs.pr = pr.kind; prToast(pr); } else delete cs.pr;
   if(carry) it.sets.forEach((x,k)=>{ if(k>j && !x.done){ x.w=cs.w; x.r=cs.r; } });
   if(focus && focus.i===i){
     const nx = it.sets.findIndex(s=>!s.done);
     if(nx>=0) selSet=nx;
-    else { const k=nextPending(); if(k>=0 && k!==focus.i){ focus.i=k; selSet=null; howOpen=false; if(!pr) toast("Next exercise"); } }
+    focus.edit = false;      // all sets done → the Up next card replaces the inputs
   }
   persistPlan();
   if(!S.plan.items.every(x=>itemState(x).all)) startRest();
 }
-function holdHTML(){
-  const left = hold.end-Date.now();
-  return `<div class="rest hold" role="timer" aria-label="Hold, set ${hold.j+1}">
-    <div class="rest-top"><span class="rest-l">Hold, set ${hold.j+1}</span><span class="rest-t" id="holdT">${fmtT(left)}</span></div>
-    <div class="rest-line"><i id="holdL" style="transform:scaleX(${Math.max(0,left/hold.total).toFixed(3)})"></i></div>
-    <div class="rest-b"><button class="link danger" data-act="holdcancel">Cancel</button><span class="sp"></span><button class="link" data-act="holdstop">Done early</button></div></div>`;
+const heldMs = () => !hold ? 0 : hold.elapsed + (hold.paused ? 0 : Date.now()-hold.runStart);
+function holdHTML(){ return ""; }        // the hold runs in the full-screen pop-up now
+// Log a hold and close the pop-up. secs = time actually held.
+function endHold(secs, carry){
+  const h = hold; if(!h) return;
+  hold = null;
+  const it = S.plan.items[h.i]; if(!it || !it.sets[h.j]) return render();
+  snapshotForUndo();
+  it.sets[h.j].w = secs;
+  completeAt(h.i, h.j, carry);
+  justDone = {i:h.i, j:h.j}; setTimeout(()=>{ justDone = null; }, 400);
+  render(false);
+  showUndo(`Set ${h.j+1} logged: ${secs} s`);
+}
+function holdOverlay(){
+  if(!hold || !S.plan) return "";
+  const it = S.plan.items[hold.i]; if(!it) return "";
+  const e = exById(it.ex) || {name:"Unknown"};
+  const held = heldMs(), left = Math.max(0, hold.total-held), C = 2*Math.PI*88;
+  const m = !!S.settings.mute;
+  return `<div class="hov-bg"><div class="hov" role="dialog" aria-modal="true" aria-label="${esc(e.name)} hold timer">
+    <div class="hov-top"><button class="iconbtn" data-act="holdcancel" aria-label="Close without logging">${ICON.x}</button><span class="hov-set">Set ${hold.j+1} of ${it.sets.length}</span><span class="hov-sp"></span></div>
+    <h2 class="hov-name">${esc(e.name)}</h2>
+    <div class="hov-ring" role="timer" aria-label="Time left">
+      <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="trk" cx="100" cy="100" r="88"/><circle class="prog" id="holdRing" cx="100" cy="100" r="88" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-Math.min(1,held/hold.total))).toFixed(1)}" transform="rotate(-90 100 100)"/></svg>
+      <div class="hov-c"><div class="hold-t${left<=5000&&!hold.paused?" last5":""}" id="holdT">${fmtT(left)}</div><div class="hov-of" id="holdOf">${hold.paused?"paused · ":""}of ${fmtT(hold.total)} hold</div></div>
+    </div>
+    <div class="hov-pic"><img src="${imgOf(e)}" alt=""></div>
+    <div class="hov-row"><button class="link mute" data-act="mute" aria-pressed="${!m}">${m?"Sound off":"Sound on"}</button><button class="link" data-act="hold10">+10s</button></div>
+    <div class="hov-btns"><button class="cta ghost" data-act="holdpause">${hold.paused?"Resume":"Pause"}</button><button class="cta hold-done" data-act="holdstop">Done early</button></div>
+  </div></div>`;
 }
 function tickHold(){
   if(!hold) return;
-  const left = hold.end-Date.now();
-  if(left<=0){
-    const h=hold; hold=null; ding(); try{ navigator.vibrate && navigator.vibrate([250,120,250]); }catch(_){}
-    completeAt(h.i,h.j);
-    if(focus) render(false); else toast("Hold done");
+  const held = heldMs(), left = hold.total - held;
+  if(left<=0 && !hold.paused){
+    ding(); try{ navigator.vibrate && navigator.vibrate([250,120,250]); }catch(_){}
+    endHold(Math.round(hold.total/1000), true);
     return;
   }
-  const t=document.getElementById("holdT"), l=document.getElementById("holdL");
-  if(t) t.textContent = fmtT(left);
-  if(l) l.style.transform = `scaleX(${(left/hold.total).toFixed(3)})`;
+  const t=document.getElementById("holdT"), ring=document.getElementById("holdRing"), of=document.getElementById("holdOf");
+  if(t){ t.textContent = fmtT(left); t.classList.toggle("last5", left<=5000 && !hold.paused); }
+  if(ring){ const C = 2*Math.PI*88; ring.setAttribute("stroke-dashoffset", (C*(1-Math.min(1,held/hold.total))).toFixed(1)); }
+  if(of) of.textContent = (hold.paused?"paused · ":"")+`of ${fmtT(hold.total)} hold`;
 }
 function tickRest(){
   tickHold();
@@ -1257,7 +1574,7 @@ function tickRest(){
   const left = rest.end-Date.now();
   if(left<=0) return restOver();
   const t=document.getElementById("restT"), l=document.getElementById("restL");
-  if(t) t.textContent = fmtT(left);
+  if(t){ t.textContent = fmtT(left); t.classList.toggle("last5", left<=5000); }
   if(l) l.style.transform = `scaleX(${(left/rest.total).toFixed(3)})`;
 }
 setInterval(tickRest, 250);

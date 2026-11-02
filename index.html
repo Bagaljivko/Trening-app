@@ -179,6 +179,28 @@ body.holding{overflow:hidden}
 .sm-grid .kgc b{color:var(--kg)}
 .sm-grid .repsc b{color:var(--reps)}
 .sm-cmp{margin:12px 0 0;font-size:14px;color:var(--mut)}
+.sm-time{margin-top:14px;padding:16px 18px;border-radius:22px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--neon)}
+.sm-time b{display:block;font-size:clamp(30px,10vw,40px);font-weight:300;letter-spacing:-.03em;line-height:1.1}
+.sm-time span{display:block;font-size:12.5px;color:var(--mut);margin-top:4px}
+.sm-time.none{box-shadow:inset 0 0 0 1px var(--line)}
+.sm-time.none b{font-size:22px;font-weight:500;color:var(--mut)}
+.sm-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.sm-grid.three b{font-size:clamp(20px,6.4vw,28px)}
+.sm-grid.three div{padding:10px 12px}
+.sm-grid.three span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:399px){.sm-grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}.sm-grid.three div:last-child{grid-column:1/-1}}
+.cmpl,.exl{list-style:none;margin:8px 0 0;padding:0}
+.cmpl li,.exl li{display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;min-width:0}
+.cmpl li span{width:58px;flex:none;color:var(--mut)}
+.cmpl li b{font-weight:600}
+.cmpl li{flex-wrap:wrap}
+.cmpl li b{white-space:nowrap}
+.cmpl li em{flex-basis:100%;padding-left:68px;font-style:normal;font-size:13px;color:var(--mut)}
+.cmpl li em.good{color:var(--neon-txt)}
+.cmpl b.kgv{color:var(--kg)}
+.cmpl b.repsv{color:var(--reps)}
+.exl li span{flex:1;min-width:0}
+.exl li b{font-weight:500;color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
 .sm-cmp b{color:var(--ink)}
 .sm-cmp b.good{color:var(--neon-txt)}
 .sm-h{font-size:15px;font-weight:700;margin:22px 0 0}
@@ -1354,7 +1376,7 @@ function restOver(){
 }
 /* ---------- workout summary ---------- */
 function priorSessions(sess){ const all = allSessions(), k = all.findIndex(x=>x.id===sess.id); return k<0 ? all : all.slice(0,k); }
-const fmtDur = m => m==null ? "–" : m<60 ? `${m} min` : `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")} min`;
+const fmtDur = m => m==null ? "time not recorded" : m<60 ? `${m} min` : m%60 ? `${Math.floor(m/60)} h ${m%60} min` : `${Math.floor(m/60)} h`;
 const topSet = it => it.sets.reduce((a,x)=>(+x.w||0)>(+a.w||0) || ((+x.w||0)===(+a.w||0) && (+x.r||0)>(+a.r||0)) ? x : a, it.sets[0]||{w:0,r:0});
 function sessionStats(sess){
   let sets=0, volume=0, reps=0, secs=0; const ms = [];
@@ -1426,10 +1448,12 @@ function recommendations(sess, hl){
 // Summaries for workouts from before this feature are rebuilt from their logged sets (never written back).
 let _sumCache = {key:"", map:{}};
 function summaryOf(sess){
-  if(sess.summary) return sess.summary;
+  const saved = sess.summary;
+  if(saved && Array.isArray(saved.prs) && Array.isArray(saved.ups) && Array.isArray(saved.muscles)) return saved;
   const key = S.sessions.length+":"+(S.sessions[S.sessions.length-1]?.id||"");
   if(_sumCache.key!==key) _sumCache = {key, map:{}};
-  return _sumCache.map[sess.id] || (_sumCache.map[sess.id] = buildSummary(sess, false));
+  // rebuilt from the logged sets; keeps a saved time or recommendations if a partial summary exists
+  return _sumCache.map[sess.id] || (_sumCache.map[sess.id] = Object.assign(buildSummary(sess, false), saved ? {durMin: saved.durMin ?? null, recs: saved.recs} : {}));
 }
 let showAllSummaries = false;
 function summariesSection(){
@@ -1445,20 +1469,31 @@ function summariesSection(){
 function summaryHTML(sess){
   const sm = summaryOf(sess), title = sessionTitle(sess);
   const vol = sm.volume>0;
-  const cmp = sm.compare ? (()=>{ const ref = S.sessions.find(x=>x.id===sm.compare.id); const nm = ref ? sessionTitle(ref) : "your last similar workout";
-    const sign = sm.compare.pct>0?"+":sm.compare.pct<0?"−":"±";
-    return `<p class="sm-cmp"><b class="${sm.compare.pct>0?"good":""}">${sign}${Math.abs(sm.compare.pct)}%</b> ${sm.compare.metric} vs ${esc(nm)}${sm.compare.date?`, ${esc(fmtDate(sm.compare.date))}`:""}</p>`; })() : `<p class="sm-cmp">No similar earlier workout to compare with yet.</p>`;
+  const ref = sm.compare ? allSessions().find(x=>x.id===sm.compare.id) : null;
+  const refName = ref ? sessionTitle(ref) : "your last similar workout";
+  let cmp = `<p class="sm-cmp">No similar earlier workout to compare with yet.</p>`;
+  if(sm.compare){
+    const sign = v => v>0?"+":v<0?"−":"±";
+    const refDur = ref && ref.summary ? ref.summary.durMin : null;
+    const tLine = sm.durMin!=null && refDur!=null
+      ? `<li><span>Time</span><b>${esc(fmtDur(sm.durMin))}</b><em>${sign(sm.durMin-refDur)}${esc(fmtDur(Math.abs(sm.durMin-refDur))).replace("time not recorded","0 min")} vs ${esc(fmtDur(refDur))}</em></li>`
+      : `<li><span>Time</span><b>${esc(fmtDur(sm.durMin))}</b><em>${sm.durMin==null?"":"no recorded time to compare"}</em></li>`;
+    const vLine = `<li><span>${sm.compare.metric==="volume"?"Volume":"Reps"}</span><b class="${sm.compare.metric==="volume"?"kgv":"repsv"}">${vol&&sm.compare.metric==="volume"?sm.volume.toLocaleString()+" kg":sm.reps+" reps"}</b><em class="${sm.compare.pct>0?"good":""}">${sign(sm.compare.pct)}${Math.abs(sm.compare.pct)}% vs ${sm.compare.prev.toLocaleString()}</em></li>`;
+    cmp = `<h3 class="sm-h">Compared with ${esc(refName)}${sm.compare.date?`, ${esc(fmtDate(sm.compare.date))}`:""}</h3><ul class="cmpl">${tLine}${vLine}</ul>`;
+  }
+  const exl = sess.items.map(it=>`<li><span>${esc(exById(it.ex)?.name||"Unknown")}</span><b>${esc(setSummary(it))}</b></li>`).join("");
   const hl = sm.prs.map(x=>`<li><span class="prbadge sm">PR</span><span><b>${esc(x.name)}</b> ${esc(x.label)}</span></li>`).join("")
     + sm.ups.filter(u=>!sm.prs.some(p=>p.ex===u.ex)).map(x=>`<li><span class="upmark" aria-hidden="true">▲</span><span><b>${esc(x.name)}</b> ${esc(x.text)}</span></li>`).join("");
   const recs = sm.recs ? (sm.recs.length ? `<h3 class="sm-h">Recommendations</h3><ol class="recs">${sm.recs.map(r=>`<li class="rec ${r.kind}"><b>${esc(r.title)}</b><span>${esc(r.text)}</span></li>`).join("")}</ol>` : `<h3 class="sm-h">Recommendations</h3><p class="fine">Nothing to change. Keep going.</p>`) : `<p class="fine">Recommendations are only made for workouts finished after summaries were added.</p>`;
-  return `<p class="how open">${esc(title)}${sess.date?`, ${esc(fmtDate(sess.date))}`:""}${sess.nogym?" · No gym":""}</p>
-    <div class="sm-grid">
-      <div><b>${esc(fmtDur(sm.durMin))}</b><span>duration</span></div>
-      <div><b>${sm.exercises}</b><span>exercises</span></div>
-      <div><b>${sm.sets}</b><span>sets</span></div>
+  return `<p class="how open">${esc(title)}, ${esc(sess.date?fmtDate(sess.date):"before the app")}${sess.nogym?" · No gym":""}</p>
+    <div class="sm-time${sm.durMin==null?" none":""}"><b>${esc(fmtDur(sm.durMin))}</b><span>${sm.durMin==null?"This workout was logged before times were recorded.":"total time, first set to finish"}</span></div>
+    <div class="sm-grid three">
+      <div><b>${sm.exercises}</b><span>${sm.exercises===1?"exercise":"exercises"}</span></div>
+      <div><b>${sm.sets}</b><span>${sm.sets===1?"set":"sets"}</span></div>
       <div class="${vol?"kgc":"repsc"}"><b>${vol?sm.volume.toLocaleString():sm.reps}</b><span>${vol?"kg volume":"total reps"}</span></div>
     </div>
     ${cmp}
+    <h3 class="sm-h">Exercises</h3><ul class="exl">${exl}</ul>
     <h3 class="sm-h">Muscles trained</h3><div class="mchips">${muscleNames(sm.muscles).map(m=>`<span>${esc(m)}</span>`).join("")}</div>
     <h3 class="sm-h">Highlights</h3>${hl?`<ul class="hl">${hl}</ul>`:`<p class="fine">No PRs or step-ups this time. Steady work counts too.</p>`}
     ${recs}`;

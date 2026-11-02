@@ -140,6 +140,15 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .sw{position:relative}
 .set{width:46px;height:46px;border-radius:23px;border:1.5px solid var(--neon-txt);color:var(--neon-txt);font-size:14px;font-weight:600;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .set.done{background:var(--neon);border-color:var(--neon);color:var(--neon-ink)}
+.set svg{width:20px;height:20px;stroke:currentColor}
+.set.pop{animation:pop .35s ease-out}
+@keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.utoast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px);background:var(--ink);color:var(--bg);padding:8px 8px 8px 16px;border-radius:22px;font-size:14px;font-weight:600;box-shadow:0 6px 24px rgb(0 0 0 / .35);animation:udrop .2s ease-out}
+.utoast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.utoast button{flex:none;height:34px;padding:0 14px;border-radius:17px;background:var(--bg);color:var(--ink);font-weight:700;font-size:14px}
+@keyframes udrop{from{transform:translate(-50%,-12px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+.rest.over .rest-t{color:var(--mut)}
+#ctaBox{display:flex;flex-direction:column;gap:10px}
 .set.cur{outline:2px solid var(--ink);outline-offset:3px}
 .set.add{border:1.5px dashed var(--dim);color:var(--mut);font-size:20px;font-weight:300}
 .setx{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:11px;background:var(--bg);border:1px solid var(--line);color:var(--del);display:grid;place-items:center}
@@ -182,7 +191,7 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .nums.one .step button{max-width:none;padding:0 18px;font-size:16px;font-weight:600}
 .cta.go{animation:go 1.2s ease-in-out infinite}
 @keyframes go{50%{box-shadow:0 0 38px rgba(61,255,143,.65);transform:scale(1.015)}}
-@media (prefers-reduced-motion:reduce){.cta.go{animation:none}}
+@media (prefers-reduced-motion:reduce){.cta.go,.set.pop,.utoast{animation:none}}
 .upnext{margin:22px 0 0;padding:16px;border-radius:24px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--neon)}
 .upnext.done{box-shadow:inset 0 0 0 1.5px var(--line)}
 .un-row{display:flex;gap:14px;align-items:center;min-width:0}
@@ -815,19 +824,13 @@ function viewFocus(){
   const sg = suggestion(it.ex), hint = overloadHint(it.ex, !!it.plateauOff);
   const last = sg.last ? `Last time<br><b>${esc(setSummary(sg.last))}</b>` : sg.tmpl ? `From your sheet<br><b>${esc(fmtV(it.ex,sg.w))}</b>` : `First time`;
   const segs = items.map((x,k)=>`<button class="sg ${itemState(x).all?"d":""} ${k===i?"c":""}" data-act="jump" data-i="${k}" aria-label="Exercise ${k+1}"></button>`).join("");
-  const circles = it.sets.map((x,k)=>`<span class="sw"><button class="set ${x.done?"done":""} ${k===j?"cur":""}" data-act="sel" data-j="${k}" aria-label="Set ${k+1}${x.done?", done":""}${x.pr?", personal record":""}">${k+1}</button>${x.pr?`<span class="prdot" aria-hidden="true">PR</span>`:""}${k>=3?`<button class="setx" data-act="delsetj" data-i="${i}" data-j="${k}" aria-label="Delete set ${k+1}">${ICON.x}</button>`:""}</span>`).join("")
+  const circles = it.sets.map((x,k)=>`<span class="sw"><button class="set ${x.done?"done":""} ${k===j&&(!x.done||focus.edit)?"cur":""} ${justDone&&justDone.i===i&&justDone.j===k?"pop":""}" data-act="sel" data-j="${k}" aria-label="Set ${k+1}${x.done?", done":""}${x.pr?", personal record":""}">${x.done?ICON.check:k+1}</button>${x.pr?`<span class="prdot" aria-hidden="true">PR</span>`:""}${k>=3?`<button class="setx" data-act="delsetj" data-i="${i}" data-j="${k}" aria-label="Delete set ${k+1}">${ICON.x}</button>`:""}</span>`).join("")
     + `<button class="set add" data-act="addset" data-i="${i}" aria-label="Add set">+</button>`;
   const allDone = items.every(x=>itemState(x).all);
   const exDone = itemState(it).all && !focus.edit;
   const nextI = nextPending();
   const upNext = exDone ? upNextHTML(nextI, allDone) : "";
-  let cta;
-  if(hold) cta = holdHTML();
-  else if(rest && !allDone) cta = restHTML();
-  else if(exDone && !allDone) cta = "";
-  else if(allDone) cta = `<button class="cta" data-act="finish">Finish workout</button>`;
-  else if(s.done) cta = `<button class="cta ghost" data-act="undo">Undo set ${j+1}</button>`;
-  else cta = isTimed(it.ex) ? `<button class="cta" data-act="hold">Start ${esc(+s.w||30)} s</button>` : `<button class="cta" data-act="complete">Complete set ${j+1}</button>`;
+  const cta = dockHTML();
   return `<div class="focus" data-swipe>
     <div class="ftop"><button class="iconbtn" data-act="back" aria-label="Back to today">${ICON.x}</button><div class="segs">${segs}</div><span class="cnt">${i+1}/${items.length}</span></div>
     <div class="fbody">
@@ -846,6 +849,28 @@ function viewFocus(){
   </div>`;
 }
 // Weight and reps as two separate cards (or one card of seconds for timed exercises).
+// What the primary button does for the current set.
+function doneLabel(){
+  const it = S.plan.items[focus.i], j = selSet ?? 0, s = it.sets[j];
+  const left = it.sets.filter(x=>!x.done).length;
+  const others = S.plan.items.some((x,k)=>k!==focus.i && !itemState(x).all);
+  if(!s || s.done) return null;
+  if(isTimed(it.ex)) return {act:"hold", text:`Start set ${j+1} · ${+s.w||30} s`};
+  if(left<=1) return others ? {act:"done", text:"Finish exercise"} : {act:"done", text:"Finish workout"};
+  return {act:"done", text:`Done, set ${j+1}`};
+}
+function dockHTML(){
+  if(!focus || !S.plan) return "";
+  if(hold) return holdHTML();
+  const it = S.plan.items[focus.i], allDone = S.plan.items.every(x=>itemState(x).all);
+  const timer = rest && !allDone ? restHTML() : "";
+  if(allDone) return `<button class="cta" data-act="finish">Finish workout</button>`;
+  if(itemState(it).all && !focus.edit) return timer;                    // the Up next card has the button
+  const s = it.sets[selSet ?? 0];
+  if(s && s.done) return timer + `<button class="cta ghost" data-act="editdone">Done editing set ${(selSet??0)+1}</button>`;
+  const d = doneLabel();
+  return timer + (d ? `<button class="cta" data-act="${d.act}">${esc(d.text)}</button>` : "");
+}
 function upNextHTML(k, allDone){
   if(allDone || k<0) return `<div class="upnext done"><div class="un-eye">All exercises done</div><div class="un-name">Nice work.</div><p class="un-sub">Finish the workout to save it and see your summary.</p></div>`;
   const e = exById(S.plan.items[k].ex) || {name:"Unknown", group:"other"};
@@ -1084,15 +1109,17 @@ $app.addEventListener("click", e=>{
       else if(f==="w"){ const v=+s.w||0; const st=(d>0? v>=20 : v>20)?2.5:1; s.w = Math.max(0, Math.round((v + d*st)*10)/10); }
       else s.r = Math.max(0, (+s.r||0) + d);
       persistPlan(); render(); break; }
-    case "complete": completeAt(focus.i, selSet); render(false); window.scrollTo(0,0); break;
+    case "complete": case "done": doneSet(); break;
+    case "editdone": { focus.edit=false; const k=S.plan.items[focus.i].sets.findIndex(x=>!x.done); selSet = k<0 ? null : k; render(); break; }
+    case "undolast": undoLast(); break;
     case "hold": { unlockAudio(); const s=S.plan.items[focus.i].sets[selSet], ms=(+s.w||30)*1000; s.w=+s.w||30;
       rest=null; hold={end:Date.now()+ms, total:ms, start:Date.now(), i:focus.i, j:selSet}; holdWake(); persistPlan(); render(); break; }
     case "holdstop": if(hold){ const h=hold; hold=null; const secs=Math.max(1,Math.round((Date.now()-h.start)/1000)); S.plan.items[h.i].sets[h.j].w=secs; completeAt(h.i,h.j,false); render(false); } break;
     case "holdcancel": hold=null; releaseWake(); render(); break;
-    case "restskip": if(rest){ rest.over=true; releaseWake(); render(); } break;
+    case "restskip": if(rest){ rest=null; releaseWake(); render(); } break;
     case "rest30": if(rest && !rest.over){ rest.end+=30000; rest.total+=30000; tickRest(); } break;
-    case "restgo": rest=null; render(); break;
-    case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=restHTML(); break;
+    case "restgo": rest=null; render(); break;   // kept for any old screen still showing it
+    case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=dockHTML(); break;
     case "plateauoff": S.plan.items[i].plateauOff = true; persistPlan(); render(); break;
     case "usehint": {
       const it=S.plan.items[focus.i], w=b.dataset.w, r=b.dataset.r;
@@ -1155,14 +1182,15 @@ $app.addEventListener("touchend", e=>{
   }
 });
 
-function finish(){
+function finish(fromDone=false){
   const prs = S.plan.items.reduce((n,it)=>n+it.sets.filter(s=>s.done&&s.pr).length,0);
   const items = S.plan.items.map(it=>({ex:it.ex, sets:it.sets.filter(s=>s.done).map(s=>({w:+s.w||0, r:+s.r||0}))})).filter(it=>it.sets.length);
   if(!items.length) return toast("Complete at least one set first");
   const s = {id:Date.now().toString(36), date:new Date().toISOString(), items, v:2};
   if(S.plan.nogym) s.nogym = true;
   S.sessions.push(s); S.plan=null; nogymNext=false; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
-  render(false); window.scrollTo(0,0); toast(`Workout ${S.sessions.length} saved`+(prs?`, ${prs} new PR${prs>1?"s":""}`:""));
+  render(false); window.scrollTo(0,0); if(!fromDone) toast(`Workout ${S.sessions.length} saved`+(prs?`, ${prs} new PR${prs>1?"s":""}`:""));
+  return s;
 }
 async function exportBackup(){
   const data = JSON.stringify({app:"training-log",version:2,exported:new Date().toISOString(),
@@ -1220,7 +1248,7 @@ function restHTML(){
   const nextSet = (selSet??0)+1;
   const fit = focus && S.plan && S.plan.items[focus.i], exOver = fit && itemState(fit).all;
   const restLabel = exOver ? "Rest before the next exercise" : `Rest before set ${nextSet}`;
-  if(rest.over) return `<button class="cta go" data-act="restgo">Start set ${nextSet}</button>`;
+  if(rest.over) return `<div class="rest over" role="status"><div class="rest-top"><span class="rest-l">Rest over</span><span class="rest-t">0:00</span></div></div>`;
   const left = rest.end-Date.now(), m = !!S.settings.mute;
   const icon = m ? '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg>';
   return `<div class="rest" role="timer" aria-label="${restLabel}">
@@ -1254,8 +1282,53 @@ function restOver(){
   ding();
   try{ navigator.vibrate && navigator.vibrate([250,120,250]); }catch(_){}
   const box = document.getElementById("ctaBox");
-  if(focus && box) box.innerHTML = restHTML();
+  if(focus && box) box.innerHTML = dockHTML();
   else toast("Rest is over. Time for the next set");
+}
+/* ---------- Done button + undo ---------- */
+let undoState = null, undoTimer = null, justDone = null;
+function snapshotForUndo(label){
+  undoState = {plan: JSON.parse(JSON.stringify(S.plan)), focus: focus ? {...focus} : null, selSet, rest: rest ? {...rest} : null, session: null, tab};
+  return label;
+}
+function doneSet(){
+  if(!focus || !S.plan) return;
+  const i = focus.i, it = S.plan.items[i], j = selSet ?? it.sets.findIndex(x=>!x.done);
+  if(j<0 || !it.sets[j] || it.sets[j].done) return;
+  const label = doneLabel()?.text || "";
+  const v = it.sets[j];
+  snapshotForUndo();
+  completeAt(i, j);
+  justDone = {i, j};
+  try{ navigator.vibrate && navigator.vibrate(35); }catch(_){}
+  const what = isTimed(it.ex) ? `${+v.w||0} s` : `${+v.w ? r1(+v.w)+" kg × " : ""}${+v.r||0}${+v.w?"":" reps"}`;
+  if(label==="Finish workout"){
+    const sess = finish(true);
+    if(sess){ undoState.session = sess.id; showUndo(`Set ${j+1} logged, workout saved`); }
+    return;
+  }
+  render(false);
+  setTimeout(()=>{ justDone = null; }, 400);
+  showUndo(`Set ${j+1} logged: ${what}`);
+}
+function showUndo(msg){
+  document.querySelector(".utoast")?.remove(); clearTimeout(undoTimer);
+  const t = document.createElement("div"); t.className = "utoast"; t.setAttribute("role","status");
+  t.innerHTML = `<span>${esc(msg)}</span><button type="button">Undo</button>`;
+  t.querySelector("button").addEventListener("click", undoLast);
+  document.body.appendChild(t);
+  undoTimer = setTimeout(()=>{ t.remove(); undoState = null; }, 5000);
+}
+function undoLast(){
+  const u = undoState; if(!u) return;
+  undoState = null; clearTimeout(undoTimer); document.querySelector(".utoast")?.remove();
+  if(u.session){                                   // the workout was just saved: take it back out
+    S.sessions = S.sessions.filter(x=>x.id!==u.session);
+    if(db) ref("s-"+u.session).delete().catch(()=>{});
+    sheet = null; tab = u.tab;
+  }
+  S.plan = u.plan; focus = u.focus; selSet = u.selSet; rest = null; justDone = null; releaseWake();
+  persistPlan(); saveLocal(); render(false); toast("Undone");
 }
 function completeAt(i,j,carry=true){
   const it=S.plan.items[i]; if(!it || !it.sets[j]) return;

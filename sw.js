@@ -1,5 +1,5 @@
 // Offline support: keep the app shell and all exercise pictures cached, refresh them in the background.
-const CACHE = "training-v4";
+const CACHE = "training-v5";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
   "images/archer-push-up.svg",
   "images/arnold-press-standing.svg",

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Training</title>
 <meta name="description" content="A simple training log with shuffled workouts, rest timer and weekly goals.">
 <meta name="theme-color" content="#000000">
@@ -52,6 +52,8 @@
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
+/* native feel: no double-tap zoom (scrolling and taps still work); applied to every element so it also holds inside scrolling sheets */
+html,body,body *{touch-action:manipulation}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:400 16px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
@@ -1646,6 +1648,8 @@ setInterval(tickRest, 250);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ tickRest(); if(rest && !rest.over) holdWake(); } });
 
 /* ---------- start ---------- */
+// iOS Safari ignores user-scalable=no, so block its pinch-zoom gesture events too.
+["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t, e=>e.preventDefault(), {passive:false}));
 loadLocal();
 const h = location.hash.slice(1); if(["today","exercises","history","body"].includes(h)) tab=h;
 if(h==="weighin"){ tab="body"; sheet={type:"weighin"}; }

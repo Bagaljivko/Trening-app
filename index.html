@@ -23,6 +23,7 @@
   /* colour system: weight, reps, working countdown, rest, remove (light mode uses deeper shades) */
   --kg:#007A8F; --kg-bg:rgba(0,122,143,.07); --reps:#7438D9; --reps-bg:rgba(116,56,217,.07);
   --hold:#D41F1F; --hold-ink:#FFFFFF; --rest:#1F5BD6; --del:#9E3B34;
+  --flash:#0B0B0D; --rest-glow:none; --hold-glow:none;
   color-scheme:light; box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
@@ -33,6 +34,7 @@
     --glow:drop-shadow(0 0 10px rgba(61,255,143,.5)) drop-shadow(0 0 2px rgba(61,255,143,.9));
     --kg:#00E5FF; --kg-bg:rgba(0,229,255,.06); --reps:#B57BFF; --reps-bg:rgba(181,123,255,.07);
     --hold:#FF3B3B; --hold-ink:#000000; --rest:#4D8BFF; --del:#C0605A;
+    --flash:#FFFFFF; --rest-glow:drop-shadow(0 0 8px rgba(77,139,255,.6)); --hold-glow:drop-shadow(0 0 10px rgba(255,59,59,.55));
     color-scheme:dark;
   }
 }
@@ -42,6 +44,7 @@
   --glow:drop-shadow(0 0 10px rgba(61,255,143,.5)) drop-shadow(0 0 2px rgba(61,255,143,.9));
   --kg:#00E5FF; --kg-bg:rgba(0,229,255,.06); --reps:#B57BFF; --reps-bg:rgba(181,123,255,.07);
   --hold:#FF3B3B; --hold-ink:#000000; --rest:#4D8BFF; --del:#C0605A;
+  --flash:#FFFFFF; --rest-glow:drop-shadow(0 0 8px rgba(77,139,255,.6)); --hold-glow:drop-shadow(0 0 10px rgba(255,59,59,.55));
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -199,13 +202,17 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .hopts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .hopts .chip{height:36px;color:var(--ink)}
 .tools{display:flex;gap:22px;margin:26px 0 0;flex-wrap:wrap}
-.fdock{position:sticky;bottom:0;padding:18px 24px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 30%)}
-.rest{border:1px solid var(--line);background:var(--s1);border-radius:24px;padding:14px 18px 12px}
+.fdock{position:sticky;bottom:0;padding:14px 24px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 30%)}
+.rest{border:1px solid var(--line);background:var(--s1);border-radius:20px;padding:10px 16px 8px}
 .rest-top{display:flex;align-items:baseline;justify-content:space-between}
 .rest-l{font-size:13px;color:var(--mut);font-weight:500}
-.rest-t{font-size:40px;font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
-.rest-line{height:3px;border-radius:2px;background:var(--s2);margin:12px 0 10px;overflow:hidden}
-.rest-line i{display:block;height:100%;background:var(--neon);transform-origin:left;filter:var(--glow)}
+.rest-t{display:inline-block;font-size:34px;font-weight:300;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;color:var(--rest);transition:color .2s}
+.rest-t.last5,.hold-t.last5{color:var(--flash);animation:pulse5 1s ease-in-out infinite}
+@keyframes pulse5{50%{opacity:.55;transform:scale(1.06)}}
+.rest-line{height:3px;border-radius:2px;background:var(--s2);margin:8px 0 6px;overflow:hidden}
+.rest-line i{display:block;height:100%;background:var(--rest);transform-origin:left;filter:var(--rest-glow)}
+.rest.hold .rest-t{color:var(--hold)}
+.rest.hold .rest-line i{background:var(--hold);filter:var(--hold-glow)}
 .rest-b{display:flex;align-items:center;gap:22px}
 .rest-b .sp{flex:1}
 .rest-b .mute{display:flex;align-items:center;gap:6px}
@@ -214,7 +221,7 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .nums.one .step button{max-width:none;padding:0 18px;font-size:16px;font-weight:600}
 .cta.go{animation:go 1.2s ease-in-out infinite}
 @keyframes go{50%{box-shadow:0 0 38px rgba(61,255,143,.65);transform:scale(1.015)}}
-@media (prefers-reduced-motion:reduce){.cta.go,.set.pop,.utoast{animation:none}}
+@media (prefers-reduced-motion:reduce){.cta.go,.set.pop,.utoast,.rest-t.last5,.hold-t.last5{animation:none}}
 .upnext{margin:22px 0 0;padding:16px;border-radius:24px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--neon)}
 .upnext.done{box-shadow:inset 0 0 0 1.5px var(--line)}
 .un-row{display:flex;gap:14px;align-items:center;min-width:0}
@@ -1286,7 +1293,7 @@ function restHTML(){
   const left = rest.end-Date.now(), m = !!S.settings.mute;
   const icon = m ? '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg>';
   return `<div class="rest" role="timer" aria-label="${restLabel}">
-    <div class="rest-top"><span class="rest-l">${restLabel}</span><span class="rest-t" id="restT">${fmtT(left)}</span></div>
+    <div class="rest-top"><span class="rest-l">${restLabel}</span><span class="rest-t${left<=5000?" last5":""}" id="restT">${fmtT(left)}</span></div>
     <div class="rest-line"><i id="restL" style="transform:scaleX(${Math.max(0,left/rest.total).toFixed(3)})"></i></div>
     <div class="rest-b"><button class="link mute" data-act="mute" aria-pressed="${!m}" aria-label="${m?"Sound off":"Sound on"}">${icon}${m?"Sound off":"Sound on"}</button><span class="sp"></span><button class="link" data-act="rest30">+30s</button><button class="link" data-act="restskip">Skip</button></div></div>`;
 }
@@ -1516,7 +1523,7 @@ function tickRest(){
   const left = rest.end-Date.now();
   if(left<=0) return restOver();
   const t=document.getElementById("restT"), l=document.getElementById("restL");
-  if(t) t.textContent = fmtT(left);
+  if(t){ t.textContent = fmtT(left); t.classList.toggle("last5", left<=5000); }
   if(l) l.style.transform = `scaleX(${(left/rest.total).toFixed(3)})`;
 }
 setInterval(tickRest, 250);

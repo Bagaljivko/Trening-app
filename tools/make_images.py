@@ -3,9 +3,9 @@
 
 Same technique and style as the illustrations in Trening-za-decu: one static
 SVG per exercise (viewBox 400x300) on a transparent background, with a stick
-figure, a floor line, equipment and an arrow for the movement. The app shows
-every picture on a plain white card in both themes, so the figure is black,
-the floor and props mid grey and the arrow a darker green (#00A651).
+figure, a floor line, equipment and a green arrow for the movement. Colours
+follow the app's theme: white figure with light-grey props on black in dark
+mode, black figure with mid-grey props in light mode (see THEMES).
 
 On top of that style this file adds gym equipment: benches, boxes, barbells
 (seen end-on as a weight plate in side views), dumbbells, kettlebell, cable
@@ -25,14 +25,51 @@ import sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 OUT = os.path.join(ROOT, "images")
 
-# Drawn for a plain white card (the app shows every picture on white, in both themes).
-NEAR = "#111114"    # limbs closest to the viewer: black
-FAR = "#4F4F57"     # limbs on the far side: dark grey, so depth still reads
-PROP = "#8C8C94"    # benches, boxes, chairs, machine frames, wall: mid grey
-FLOOR = "#8C8C94"   # floor line: mid grey
-ARROW = "#00A651"   # movement arrow: darker green that stays visible on white
-IRON = "#7E7E86"    # weights: plates, dumbbells, kettlebell, cable: mid grey
-IRON_IN = "#E6E6EA"  # inside of a weight plate
+# Every shape is tagged with a role instead of a fixed colour, so one set of files
+# follows the app's theme. The app puts the SVG straight into the page and colours
+# the roles with CSS variables (--ill-near, --ill-far, ...). Opened on its own, the
+# file falls back to the colours in THEMES below, following the device's light or
+# dark setting.
+NEAR = "@near"      # limbs closest to the viewer
+FAR = "@far"        # limbs on the far side
+PROP = "@prop"      # benches, boxes, chairs, machine frames, wall
+FLOOR = "@floor"    # floor line
+ARROW = "@arrow"    # movement arrow
+IRON = "@iron"      # weights: plates, dumbbells, kettlebell, cable
+IRON_IN = "@ironin"  # inside of a weight plate
+THEMES = {
+    "light": {"near": "#111114", "far": "#4F4F57", "prop": "#85858D", "floor": "#85858D",
+              "iron": "#77777F", "ironin": "#E6E6EA", "arrow": "#008F45"},
+    "dark": {"near": "#F5F5F7", "far": "#BEBEC5", "prop": "#8E8E96", "floor": "#8E8E96",
+             "iron": "#9E9EA6", "ironin": "#2A2A30", "arrow": "#3DFF8F"},
+}
+
+
+def themed(markup):
+    """Turn stroke="@role" / fill="@role" into classes ill-s-role / ill-f-role."""
+    def tag(m):
+        attrs = m.group(2)
+        cls = []
+        for kind, short in (("stroke", "s"), ("fill", "f")):
+            r = re.search(kind + r'="@(\w+)"', attrs)
+            if r:
+                cls.append(f"ill-{short}-{r.group(1)}")
+                attrs = attrs.replace(r.group(0), "")
+        if not cls:
+            return m.group(0)
+        attrs = re.sub(r"\s+", " ", attrs).rstrip()
+        return f'<{m.group(1)} class="{" ".join(cls)}"{attrs}{m.group(3)}>'
+    out = re.sub(r"<(\w+)((?:\s[^<>]*?)?)(\s*/?)>", tag, markup)
+    assert "@" not in out, "untagged colour left in SVG"
+    return out
+
+
+def svg_style():
+    roles = THEMES["light"].keys()
+    rules = "".join(f".ill-s-{r}{{stroke:var(--ill-{r},{THEMES['light'][r]})}}"
+                    f".ill-f-{r}{{fill:var(--ill-{r},{THEMES['light'][r]})}}" for r in roles)
+    dark = "".join(f"--ill-{r}:{THEMES['dark'][r]};" for r in roles)
+    return f"<style>{rules}@media (prefers-color-scheme:dark){{svg{{{dark}}}}}</style>"
 G = 262             # floor level for feet
 
 TORSO, THIGH, SHIN, UARM, FARM = 72, 54, 56, 34, 32
@@ -310,8 +347,8 @@ def svg(title, p):
     body_ += [arrow(a) for a in p.get("arrows", [])]
     t = title.replace("&", "&amp;").replace("<", "&lt;").replace('"', "&quot;")
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="{t}">'
-            f'<title>{t}</title>'
-            f'<g stroke-linecap="round" stroke-linejoin="round">{"".join(body_)}</g></svg>\n')
+            f'<title>{t}</title>{svg_style()}'
+            f'<g stroke-linecap="round" stroke-linejoin="round">{themed("".join(body_))}</g></svg>\n')
 
 
 def X(d, **kw):

@@ -2,9 +2,10 @@
 """Generates the exercise illustrations in /images.
 
 Same technique and style as the illustrations in Trening-za-decu: one static
-SVG per exercise (viewBox 400x300), a light stick figure on a transparent
-background (the app always shows it on a dark picture card, in both themes),
-a grey floor line, grey equipment and a neon-green arrow for the movement.
+SVG per exercise (viewBox 400x300) on a transparent background, with a stick
+figure, a floor line, equipment and an arrow for the movement. The app shows
+every picture on a plain white card in both themes, so the figure is black,
+the floor and props mid grey and the arrow a darker green (#00A651).
 
 On top of that style this file adds gym equipment: benches, boxes, barbells
 (seen end-on as a weight plate in side views), dumbbells, kettlebell, cable
@@ -24,13 +25,14 @@ import sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 OUT = os.path.join(ROOT, "images")
 
-NEAR = "#F5F5F7"    # limbs closest to the viewer
-FAR = "#A3A3AB"     # limbs on the far side
-PROP = "#6E6E76"    # benches, boxes, machine frames, wall
-FLOOR = "#4A4A52"
-ARROW = "#3DFF8F"
-IRON = "#9A9AA2"    # weights: plates, dumbbells, kettlebell, cable
-IRON_IN = "#2A2A30"  # inside of a weight plate
+# Drawn for a plain white card (the app shows every picture on white, in both themes).
+NEAR = "#111114"    # limbs closest to the viewer: black
+FAR = "#4F4F57"     # limbs on the far side: dark grey, so depth still reads
+PROP = "#8C8C94"    # benches, boxes, chairs, machine frames, wall: mid grey
+FLOOR = "#8C8C94"   # floor line: mid grey
+ARROW = "#00A651"   # movement arrow: darker green that stays visible on white
+IRON = "#7E7E86"    # weights: plates, dumbbells, kettlebell, cable: mid grey
+IRON_IN = "#E6E6EA"  # inside of a weight plate
 G = 262             # floor level for feet
 
 TORSO, THIGH, SHIN, UARM, FARM = 72, 54, 56, 34, 32

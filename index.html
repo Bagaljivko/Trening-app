@@ -147,6 +147,11 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .set.pop{animation:pop .35s ease-out}
 @keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 .sumv{flex-direction:column;align-items:flex-end;gap:2px}
+.htime{flex-direction:column;align-items:flex-end;gap:2px}
+.htime b{min-width:0}
+.htime b.dim{color:var(--mut);font-weight:400;font-size:12.5px}
+.htime span{font-size:12px}
+.delw{display:block;margin:20px auto 0}
 .sumv b.kgv{color:var(--kg)}
 .sumv b.repsv{color:var(--reps)}
 body.holding{overflow:hidden}
@@ -989,11 +994,10 @@ function viewHistory(){
     <div class="stats"><div><b>${p.total}</b><span>workouts</span></div><div class="n"><b>${stk}</b><span>week streak</span></div><div><b>${p.month}</b><span>this month</span></div></div>
     <div class="weeks" role="img" aria-label="Workouts per week over the last 12 weeks">${grid}</div>
     <div class="wl"><span>12 weeks ago</span><span>This week</span></div>
-    ${summariesSection()}
     <div class="list"><button class="row" data-act="prs"><span class="nm">Personal records<small>${Object.keys(computePRs()).length} exercises with a best</small></span><span class="m"><span class="prbadge sm">PR</span></span></button></div>
-    <section class="list">${ss.map(s=>`<details class="sess"><summary><span><b>${esc(sessionTitle(s))}</b><small>${esc(s.date?fmtDate(s.date):"Before the app")}${s.nogym?" · No gym":""}</small></span><span class="m">${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></summary>
-      <ul>${s.items.map(it=>`<li><span>${esc(exById(it.ex)?.name||"Unknown")}</span><span>${esc(setSummary(it))}</span></li>`).join("")}</ul>
-      ${s.seed?"":`<button class="link danger" data-act="delsess" data-id="${esc(s.id)}">Delete this workout</button>`}</details>`).join("")}</section>
+    <section class="list"><div class="sec"><span>Workouts</span><span>tap for the summary</span></div>${ss.map(s=>{ const sm = summaryOf(s);
+      return `<button class="row hrow" data-act="summary" data-id="${esc(s.id)}"><span class="nm">${esc(sessionTitle(s))}${sm.prs.length?` <span class="prbadge sm">${sm.prs.length} PR${sm.prs.length>1?"s":""}</span>`:""}<small>${esc(s.date?fmtDate(s.date):"Before the app")}${s.nogym?" · No gym":""}</small></span>
+        <span class="m htime"><b class="${sm.durMin==null?"dim":""}">${esc(fmtDur(sm.durMin))}</b><span>${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></span></button>`; }).join("")}</section>
     <section class="settings"><h2>Settings</h2>
       <div class="srow"><span>Exercises per workout</span><div class="stepper"><button data-act="cnt" data-d="-1" aria-label="Fewer">−</button><output>${S.settings.count}</output><button data-act="cnt" data-d="1" aria-label="More">+</button></div></div>
       <h2 class="sub">Backup</h2>
@@ -1058,8 +1062,9 @@ function viewSheet(){
       <div class="list">${list.map(e=>`<button class="row" data-act="addthis" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${GROUPS[e.group]}</small></span></button>`).join("")}</div>`);
   }
   if(sheet.type==="summary"){
-    const sess = S.sessions.find(x=>x.id===sheet.id); if(!sess) return "";
-    return wrap("Workout summary","Workout summary", summaryHTML(sess) + `<button class="cta wide" data-act="close">Done</button>`);
+    const sess = allSessions().find(x=>x.id===sheet.id); if(!sess) return "";
+    return wrap("Workout summary","Workout summary", summaryHTML(sess) + `<button class="cta wide" data-act="close">Done</button>`
+      + (sess.seed ? "" : `<button class="link danger delw" data-act="delsess" data-id="${esc(sess.id)}">Delete this workout</button>`));
   }
   if(sheet.type==="prs"){
     const prs = computePRs(), when = s => s.date ? fmtDate(s.date) : "Before the app";
@@ -1223,7 +1228,7 @@ $app.addEventListener("click", e=>{
     case "finish": finish(); break;
     case "fg": filterGroup=b.dataset.g; render(); break;
     case "cnt": S.settings.count=Math.max(3,Math.min(10,S.settings.count+ +b.dataset.d)); persistSettings(); render(); break;
-    case "delsess": if(confirm("Delete this workout from your history?")){ const id=b.dataset.id; S.sessions=S.sessions.filter(s=>s.id!==id); saveLocal(); if(db) ref("s-"+id).delete().catch(()=>{}); render(); } break;
+    case "delsess": if(confirm("Delete this workout from your history?")){ const id=b.dataset.id; S.sessions=S.sessions.filter(s=>s.id!==id); saveLocal(); if(db) ref("s-"+id).delete().catch(()=>{}); sheet=null; render(); toast("Workout deleted"); } break;
     case "newex": sheet={type:"newex",g:"legs"}; render(); setTimeout(()=>document.getElementById("nx-name")?.focus(),50); break;
     case "nxg": { const nm=document.getElementById("nx-name").value; sheet.g=b.dataset.g; render(); document.getElementById("nx-name").value=nm; break; }
     case "nxsave": { const nm=document.getElementById("nx-name").value.trim(); if(!nm) return toast("Type a name first");
@@ -1232,7 +1237,6 @@ $app.addEventListener("click", e=>{
     case "import": document.getElementById("restore").click(); break;
     case "prs": sheet={type:"prs"}; render(); break;
     case "summary": sheet={type:"summary", id:b.dataset.id}; render(); break;
-    case "sumall": showAllSummaries=!showAllSummaries; render(); break;
     case "weighin": sheet={type:"weighin"}; render(); setTimeout(()=>document.getElementById("wi-w")?.focus(),60); break;
     case "editwi": sheet={type:"weighin", id:b.dataset.id}; render(); break;
     case "wisnooze": S.settings.wiSnooze=ymd(new Date()); persistSettings(); render(); break;
@@ -1454,17 +1458,6 @@ function summaryOf(sess){
   if(_sumCache.key!==key) _sumCache = {key, map:{}};
   // rebuilt from the logged sets; keeps a saved time or recommendations if a partial summary exists
   return _sumCache.map[sess.id] || (_sumCache.map[sess.id] = Object.assign(buildSummary(sess, false), saved ? {durMin: saved.durMin ?? null, recs: saved.recs} : {}));
-}
-let showAllSummaries = false;
-function summariesSection(){
-  const list = S.sessions.filter(x=>x.date).slice().sort((a,b)=>b.date.localeCompare(a.date));
-  if(!list.length) return "";
-  const shown = showAllSummaries ? list : list.slice(0,5);
-  return `<section class="list"><div class="sec"><span>Summaries</span>${list.length>5?`<button class="link" data-act="sumall">${showAllSummaries?"Show fewer":`Show all ${list.length}`}</button>`:""}</div>
-    ${shown.map(x=>{ const sm = summaryOf(x), vol = sm.volume>0;
-      return `<button class="row" data-act="summary" data-id="${esc(x.id)}"><span class="nm">${esc(sessionTitle(x))}${sm.prs.length?` <span class="prbadge sm">${sm.prs.length} PR${sm.prs.length>1?"s":""}</span>`:""}<small>${esc(fmtDate(x.date))}${x.nogym?" · No gym":""}</small></span>
-        <span class="m sumv"><span>${esc(fmtDur(sm.durMin))}</span><b class="${vol?"kgv":"repsv"}">${vol?sm.volume.toLocaleString()+" kg":sm.reps+" reps"}</b></span></button>`; }).join("")}
-  </section>`;
 }
 function summaryHTML(sess){
   const sm = summaryOf(sess), title = sessionTitle(sess);

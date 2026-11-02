@@ -143,6 +143,26 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .set svg{width:20px;height:20px;stroke:currentColor}
 .set.pop{animation:pop .35s ease-out}
 @keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.sm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.sm-grid div{border-radius:18px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);padding:12px 14px;min-width:0}
+.sm-grid b{display:block;font-size:28px;font-weight:300;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sm-grid span{display:block;font-size:12.5px;color:var(--mut);margin-top:4px}
+.sm-grid .kgc b{color:var(--kg)}
+.sm-grid .repsc b{color:var(--reps)}
+.sm-cmp{margin:12px 0 0;font-size:14px;color:var(--mut)}
+.sm-cmp b{color:var(--ink)}
+.sm-cmp b.good{color:var(--neon-txt)}
+.sm-h{font-size:15px;font-weight:700;margin:22px 0 0}
+.mchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.mchips span{font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:12px;background:var(--s2)}
+.hl{list-style:none;margin:10px 0 0;padding:0}
+.hl li{display:flex;gap:10px;align-items:baseline;padding:7px 0;font-size:14px;border-bottom:1px solid var(--line)}
+.hl li span:last-child{min-width:0}
+.upmark{color:var(--neon-txt);font-size:11px}
+.recs{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rec{border-radius:16px;padding:12px 14px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);font-size:14px;line-height:1.4}
+.rec b{display:block;font-size:13px;margin-bottom:2px}
+.rec.plateau{box-shadow:inset 0 0 0 1.5px var(--neon)}
 .utoast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px);background:var(--ink);color:var(--bg);padding:8px 8px 8px 16px;border-radius:22px;font-size:14px;font-weight:600;box-shadow:0 6px 24px rgb(0 0 0 / .35);animation:udrop .2s ease-out}
 .utoast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .utoast button{flex:none;height:34px;padding:0 14px;border-radius:17px;background:var(--bg);color:var(--ink);font-weight:700;font-size:14px}
@@ -981,6 +1001,10 @@ function viewSheet(){
     return wrap("Add exercise","Add exercise",`<input class="search" type="search" placeholder="Search" data-f="pq" value="${esc(sheet.q||"")}" aria-label="Search exercises">
       <div class="list">${list.map(e=>`<button class="row" data-act="addthis" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${GROUPS[e.group]}</small></span></button>`).join("")}</div>`);
   }
+  if(sheet.type==="summary"){
+    const sess = S.sessions.find(x=>x.id===sheet.id); if(!sess) return "";
+    return wrap("Workout summary","Workout summary", summaryHTML(sess) + `<button class="cta wide" data-act="close">Done</button>`);
+  }
   if(sheet.type==="prs"){
     const prs = computePRs(), when = s => s.date ? fmtDate(s.date) : "Before the app";
     const groups = ORDER.concat("other").map(g=>{
@@ -1188,7 +1212,11 @@ function finish(fromDone=false){
   if(!items.length) return toast("Complete at least one set first");
   const s = {id:Date.now().toString(36), date:new Date().toISOString(), items, v:2};
   if(S.plan.nogym) s.nogym = true;
-  S.sessions.push(s); S.plan=null; nogymNext=false; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
+  const started = S.plan.started || null, ended = Date.now();
+  S.sessions.push(s);
+  s.summary = Object.assign(buildSummary(s, true), {started, ended, durMin: started ? Math.max(1, Math.round((ended-started)/60000)) : null});
+  sheet = {type:"summary", id:s.id};
+  S.plan=null; nogymNext=false; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
   render(false); window.scrollTo(0,0); if(!fromDone) toast(`Workout ${S.sessions.length} saved`+(prs?`, ${prs} new PR${prs>1?"s":""}`:""));
   return s;
 }
@@ -1285,6 +1313,99 @@ function restOver(){
   if(focus && box) box.innerHTML = dockHTML();
   else toast("Rest is over. Time for the next set");
 }
+/* ---------- workout summary ---------- */
+function priorSessions(sess){ const all = allSessions(), k = all.findIndex(x=>x.id===sess.id); return k<0 ? all : all.slice(0,k); }
+const fmtDur = m => m==null ? "–" : m<60 ? `${m} min` : `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")} min`;
+const topSet = it => it.sets.reduce((a,x)=>(+x.w||0)>(+a.w||0) || ((+x.w||0)===(+a.w||0) && (+x.r||0)>(+a.r||0)) ? x : a, it.sets[0]||{w:0,r:0});
+function sessionStats(sess){
+  let sets=0, volume=0, reps=0, secs=0; const ms = [];
+  sess.items.forEach(it=>{ sets += it.sets.length;
+    musclesOf(it.ex).forEach(m=>{ if(!ms.includes(m)) ms.push(m); });
+    it.sets.forEach(x=>{ if(isTimed(it.ex)) secs += +x.w||0; else { reps += +x.r||0; volume += (+x.w||0)*(+x.r||0); } }); });
+  return {exercises:sess.items.length, sets, volume:Math.round(volume), reps, secs, muscles:ms};
+}
+// PRs and improvements in one workout, judged only against what came before it.
+function sessionHighlights(sess, prior){
+  const prs = [], ups = [], missed = [];
+  sess.items.forEach(it=>{
+    const prevItems = []; prior.forEach(x=>x.items.forEach(y=>{ if(y.ex===it.ex) prevItems.push(y); }));
+    if(!prevItems.length) return;
+    const name = exById(it.ex)?.name || "Unknown", timed = isTimed(it.ex);
+    const pool = []; prevItems.forEach(y=>y.sets.forEach(x=>pool.push({w:+x.w||0, r:+x.r||0})));
+    let best = null;
+    it.sets.forEach(x=>{ const w=+x.w||0, r=+x.r||0; let hit=null;
+      if(timed){ if(w > Math.max(...pool.map(p=>p.w))) hit = `${w} s hold`; }
+      else if(w>0 && w > Math.max(...pool.map(p=>p.w))) hit = `${r1(w)} kg × ${r}`;
+      else { const at = pool.filter(p=>p.w>=w); if(r>0 && at.length && r > Math.max(...at.map(p=>p.r))) hit = w ? `${r} reps at ${r1(w)} kg` : `${r} reps`; }
+      if(hit) best = hit; pool.push({w, r}); });
+    if(best) prs.push({ex:it.ex, name, label:best});
+    const last = prevItems[prevItems.length-1], a = topSet(it), b = topSet(last);
+    const aw=+a.w||0, ar=+a.r||0, bw=+b.w||0, br=+b.r||0;
+    if(timed){ if(aw>bw) ups.push({ex:it.ex, name, text:`${aw} s, up from ${bw} s`}); return; }
+    if(aw>bw) ups.push({ex:it.ex, name, text:`${r1(aw)} kg, up from ${r1(bw)} kg`});
+    else if(aw===bw && ar>br) ups.push({ex:it.ex, name, text:`${ar} reps${aw?` at ${r1(aw)} kg`:""}, up from ${br}`});
+    else if(aw===bw && ar<br) missed.push({ex:it.ex, name, w:aw, r:ar, lastR:br});
+  });
+  return {prs, ups, missed};
+}
+// Most recent earlier workout that trained mostly the same muscles (same gym / no-gym kind).
+function similarWorkout(sess, prior){
+  const main = new Set(sess.items.map(it=>musclesOf(it.ex)[0]).filter(Boolean));
+  const cands = prior.filter(x=>x.date && !!x.nogym===!!sess.nogym).reverse();
+  const score = x => { const m = new Set(x.items.map(it=>musclesOf(it.ex)[0]).filter(Boolean)); const inter=[...m].filter(k=>main.has(k)).length; return inter/(new Set([...m,...main]).size||1); };
+  return cands.find(x=>score(x)>=.4) || cands.find(x=>score(x)>0) || null;
+}
+function buildSummary(sess, withRecs){
+  const prior = priorSessions(sess), st = sessionStats(sess), hl = sessionHighlights(sess, prior);
+  const sim = similarWorkout(sess, prior);
+  let compare = null;
+  if(sim){ const ps = sessionStats(sim), useVol = st.volume>0 && ps.volume>0;
+    const a = useVol ? st.volume : st.reps, b = useVol ? ps.volume : ps.reps;
+    if(b>0) compare = {id:sim.id, date:sim.date, metric: useVol?"volume":"reps", pct: Math.round((a-b)/b*100), prev:b}; }
+  const out = {v:1, ...st, prs:hl.prs, ups:hl.ups, compare};
+  if(withRecs) out.recs = recommendations(sess, hl);
+  return out;
+}
+// Rule-based tips from your own history, most useful first, at most 4.
+function recommendations(sess, hl){
+  const recs = [];
+  const missedEx = new Set(hl.missed.map(m=>m.ex));      // reps dropped today: don't push the weight yet
+  sess.items.forEach(it=>{ if(recs.length>=2 || missedEx.has(it.ex)) return; const pl = plateauOf(it.ex), h = pl && overloadHint(it.ex);
+    if(h && h.plateau) recs.push({kind:"plateau", title:exById(it.ex)?.name||"", text:h.text}); });
+  hl.missed.slice(0,2).forEach(m=>recs.push({kind:"missed", title:m.name,
+    text: m.w ? `${m.r} reps at ${r1(m.w)} kg today, ${m.lastR} last time. Keep ${r1(m.w)} kg next time and aim for ${m.lastR}.` : `${m.r} reps today, ${m.lastR} last time. Aim for ${m.lastR} again next time.`}));
+  const dated = S.sessions.filter(x=>x.date);
+  if(dated.length>=3){
+    const lastHit = {}; dated.forEach(x=>x.items.forEach(it=>musclesOf(it.ex).forEach(m=>{ const t=new Date(x.date).getTime(); if(!lastHit[m]||t>lastHit[m]) lastHit[m]=t; })));
+    const cut = Date.now()-7*864e5, stale = Object.keys(MUSCLES).filter(m=>!lastHit[m] || lastHit[m]<cut);
+    if(stale.length) recs.push({kind:"muscles", title:"Next workout", text:`Not trained in 7+ days: ${muscleNames(stale).slice(0,4).join(", ")}. Worth including next time.`});
+  }
+  const due = weighInDue();
+  if(due) recs.push({kind:"weigh", title:"Weigh-in", text: due.first ? "Log your first weigh-in to start your weight chart." : `Your last weigh-in was ${due.days} days ago. A quick one keeps your chart up to date.`});
+  return recs.slice(0,4);
+}
+function summaryHTML(sess){
+  const sm = sess.summary || buildSummary(sess, false), title = sessionTitle(sess);
+  const vol = sm.volume>0;
+  const cmp = sm.compare ? (()=>{ const ref = S.sessions.find(x=>x.id===sm.compare.id); const nm = ref ? sessionTitle(ref) : "your last similar workout";
+    const sign = sm.compare.pct>0?"+":sm.compare.pct<0?"−":"±";
+    return `<p class="sm-cmp"><b class="${sm.compare.pct>0?"good":""}">${sign}${Math.abs(sm.compare.pct)}%</b> ${sm.compare.metric} vs ${esc(nm)}${sm.compare.date?`, ${esc(fmtDate(sm.compare.date))}`:""}</p>`; })() : `<p class="sm-cmp">No similar earlier workout to compare with yet.</p>`;
+  const hl = sm.prs.map(x=>`<li><span class="prbadge sm">PR</span><span><b>${esc(x.name)}</b> ${esc(x.label)}</span></li>`).join("")
+    + sm.ups.filter(u=>!sm.prs.some(p=>p.ex===u.ex)).map(x=>`<li><span class="upmark" aria-hidden="true">▲</span><span><b>${esc(x.name)}</b> ${esc(x.text)}</span></li>`).join("");
+  const recs = sm.recs ? (sm.recs.length ? `<h3 class="sm-h">Recommendations</h3><ol class="recs">${sm.recs.map(r=>`<li class="rec ${r.kind}"><b>${esc(r.title)}</b><span>${esc(r.text)}</span></li>`).join("")}</ol>` : `<h3 class="sm-h">Recommendations</h3><p class="fine">Nothing to change. Keep going.</p>`) : `<p class="fine">Recommendations are only made for workouts finished after summaries were added.</p>`;
+  return `<p class="how open">${esc(title)}${sess.date?`, ${esc(fmtDate(sess.date))}`:""}${sess.nogym?" · No gym":""}</p>
+    <div class="sm-grid">
+      <div><b>${esc(fmtDur(sm.durMin))}</b><span>duration</span></div>
+      <div><b>${sm.exercises}</b><span>exercises</span></div>
+      <div><b>${sm.sets}</b><span>sets</span></div>
+      <div class="${vol?"kgc":"repsc"}"><b>${vol?sm.volume.toLocaleString():sm.reps}</b><span>${vol?"kg volume":"total reps"}</span></div>
+    </div>
+    ${cmp}
+    <h3 class="sm-h">Muscles trained</h3><div class="mchips">${muscleNames(sm.muscles).map(m=>`<span>${esc(m)}</span>`).join("")}</div>
+    <h3 class="sm-h">Highlights</h3>${hl?`<ul class="hl">${hl}</ul>`:`<p class="fine">No PRs or step-ups this time. Steady work counts too.</p>`}
+    ${recs}`;
+}
+
 /* ---------- Done button + undo ---------- */
 let undoState = null, undoTimer = null, justDone = null;
 function snapshotForUndo(label){
@@ -1333,6 +1454,7 @@ function undoLast(){
 function completeAt(i,j,carry=true){
   const it=S.plan.items[i]; if(!it || !it.sets[j]) return;
   const cs=it.sets[j]; cs.done=true;
+  if(!S.plan.started) S.plan.started = Date.now();
   const pr = prFor(i,j); if(pr){ cs.pr = pr.kind; prToast(pr); } else delete cs.pr;
   if(carry) it.sets.forEach((x,k)=>{ if(k>j && !x.done){ x.w=cs.w; x.r=cs.r; } });
   if(focus && focus.i===i){

@@ -143,6 +143,9 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .set svg{width:20px;height:20px;stroke:currentColor}
 .set.pop{animation:pop .35s ease-out}
 @keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.sumv{flex-direction:column;align-items:flex-end;gap:2px}
+.sumv b.kgv{color:var(--kg)}
+.sumv b.repsv{color:var(--reps)}
 .sm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
 .sm-grid div{border-radius:18px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);padding:12px 14px;min-width:0}
 .sm-grid b{display:block;font-size:28px;font-weight:300;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -934,6 +937,7 @@ function viewHistory(){
     <div class="stats"><div><b>${p.total}</b><span>workouts</span></div><div class="n"><b>${stk}</b><span>week streak</span></div><div><b>${p.month}</b><span>this month</span></div></div>
     <div class="weeks" role="img" aria-label="Workouts per week over the last 12 weeks">${grid}</div>
     <div class="wl"><span>12 weeks ago</span><span>This week</span></div>
+    ${summariesSection()}
     <div class="list"><button class="row" data-act="prs"><span class="nm">Personal records<small>${Object.keys(computePRs()).length} exercises with a best</small></span><span class="m"><span class="prbadge sm">PR</span></span></button></div>
     <section class="list">${ss.map(s=>`<details class="sess"><summary><span><b>${esc(sessionTitle(s))}</b><small>${esc(s.date?fmtDate(s.date):"Before the app")}${s.nogym?" · No gym":""}</small></span><span class="m">${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></summary>
       <ul>${s.items.map(it=>`<li><span>${esc(exById(it.ex)?.name||"Unknown")}</span><span>${esc(setSummary(it))}</span></li>`).join("")}</ul>
@@ -1172,6 +1176,8 @@ $app.addEventListener("click", e=>{
     case "export": exportBackup(); break;
     case "import": document.getElementById("restore").click(); break;
     case "prs": sheet={type:"prs"}; render(); break;
+    case "summary": sheet={type:"summary", id:b.dataset.id}; render(); break;
+    case "sumall": showAllSummaries=!showAllSummaries; render(); break;
     case "weighin": sheet={type:"weighin"}; render(); setTimeout(()=>document.getElementById("wi-w")?.focus(),60); break;
     case "editwi": sheet={type:"weighin", id:b.dataset.id}; render(); break;
     case "wisnooze": S.settings.wiSnooze=ymd(new Date()); persistSettings(); render(); break;
@@ -1384,8 +1390,27 @@ function recommendations(sess, hl){
   if(due) recs.push({kind:"weigh", title:"Weigh-in", text: due.first ? "Log your first weigh-in to start your weight chart." : `Your last weigh-in was ${due.days} days ago. A quick one keeps your chart up to date.`});
   return recs.slice(0,4);
 }
+// Summaries for workouts from before this feature are rebuilt from their logged sets (never written back).
+let _sumCache = {key:"", map:{}};
+function summaryOf(sess){
+  if(sess.summary) return sess.summary;
+  const key = S.sessions.length+":"+(S.sessions[S.sessions.length-1]?.id||"");
+  if(_sumCache.key!==key) _sumCache = {key, map:{}};
+  return _sumCache.map[sess.id] || (_sumCache.map[sess.id] = buildSummary(sess, false));
+}
+let showAllSummaries = false;
+function summariesSection(){
+  const list = S.sessions.filter(x=>x.date).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!list.length) return "";
+  const shown = showAllSummaries ? list : list.slice(0,5);
+  return `<section class="list"><div class="sec"><span>Summaries</span>${list.length>5?`<button class="link" data-act="sumall">${showAllSummaries?"Show fewer":`Show all ${list.length}`}</button>`:""}</div>
+    ${shown.map(x=>{ const sm = summaryOf(x), vol = sm.volume>0;
+      return `<button class="row" data-act="summary" data-id="${esc(x.id)}"><span class="nm">${esc(sessionTitle(x))}${sm.prs.length?` <span class="prbadge sm">${sm.prs.length} PR${sm.prs.length>1?"s":""}</span>`:""}<small>${esc(fmtDate(x.date))}${x.nogym?" · No gym":""}</small></span>
+        <span class="m sumv"><span>${esc(fmtDur(sm.durMin))}</span><b class="${vol?"kgv":"repsv"}">${vol?sm.volume.toLocaleString()+" kg":sm.reps+" reps"}</b></span></button>`; }).join("")}
+  </section>`;
+}
 function summaryHTML(sess){
-  const sm = sess.summary || buildSummary(sess, false), title = sessionTitle(sess);
+  const sm = summaryOf(sess), title = sessionTitle(sess);
   const vol = sm.volume>0;
   const cmp = sm.compare ? (()=>{ const ref = S.sessions.find(x=>x.id===sm.compare.id); const nm = ref ? sessionTitle(ref) : "your last similar workout";
     const sign = sm.compare.pct>0?"+":sm.compare.pct<0?"−":"±";

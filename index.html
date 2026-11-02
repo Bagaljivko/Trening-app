@@ -19,32 +19,36 @@
 <style>
 :root{
   --bg:#F5F5F7; --s1:#FFFFFF; --s2:#E8E8ED; --line:#DCDCE1; --ink:#0B0B0D; --mut:#6E6E73; --dim:#B4B4BA;
-  --pic:#FFFFFF; --pic-line:#DCDCE1; --neon:#1FD873; --neon-ink:#00140A; --neon-txt:#0E9F50; --neon-d:#CFEFDC; --red:#E5372B; --glow:none;
+  --pic:#121215; --neon:#1FD873; --neon-ink:#00140A; --neon-txt:#0E9F50; --neon-d:#CFEFDC; --red:#E5372B; --glow:none;
   /* colour system: weight, reps, working countdown, rest, remove (light mode uses deeper shades) */
   --kg:#007A8F; --kg-bg:rgba(0,122,143,.07); --reps:#7438D9; --reps-bg:rgba(116,56,217,.07);
   --hold:#D41F1F; --hold-ink:#FFFFFF; --hold-btn:#D41F1F; --rest:#1F5BD6; --del:#9E3B34;
   --flash:#0B0B0D; --rest-glow:none; --hold-glow:none;
+  /* illustrations: black figure, mid-grey props and floor, deeper green arrow */
+  --ill-near:#111114; --ill-far:#4F4F57; --ill-prop:#85858D; --ill-floor:#85858D; --ill-iron:#77777F; --ill-ironin:#E6E6EA; --ill-arrow:#008F45;
   color-scheme:light; box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#000000; --s1:#0C0C0E; --s2:#16161A; --line:#1E1E22; --ink:#F5F5F7; --mut:#8A8A90; --dim:#3C3C42;
-    --pic:#FFFFFF; --pic-line:#2A2A30; --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
+    --pic:#0C0C0E; --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
     --glow:drop-shadow(0 0 10px rgba(61,255,143,.5)) drop-shadow(0 0 2px rgba(61,255,143,.9));
     --kg:#00E5FF; --kg-bg:rgba(0,229,255,.06); --reps:#B57BFF; --reps-bg:rgba(181,123,255,.07);
     --hold:#FF3B3B; --hold-ink:#FFFFFF; --hold-btn:#D93030; --rest:#4D8BFF; --del:#C0605A;
     --flash:#FFFFFF; --rest-glow:drop-shadow(0 0 8px rgba(77,139,255,.6)); --hold-glow:drop-shadow(0 0 10px rgba(255,59,59,.55));
+    --ill-near:#F5F5F7; --ill-far:#BEBEC5; --ill-prop:#8E8E96; --ill-floor:#8E8E96; --ill-iron:#9E9EA6; --ill-ironin:#2A2A30; --ill-arrow:#3DFF8F;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#000000; --s1:#0C0C0E; --s2:#16161A; --line:#1E1E22; --ink:#F5F5F7; --mut:#8A8A90; --dim:#3C3C42;
-  --pic:#FFFFFF; --pic-line:#2A2A30; --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
+  --pic:#0C0C0E; --neon:#3DFF8F; --neon-ink:#000000; --neon-txt:#3DFF8F; --neon-d:#123A24; --red:#FF5B4F;
   --glow:drop-shadow(0 0 10px rgba(61,255,143,.5)) drop-shadow(0 0 2px rgba(61,255,143,.9));
   --kg:#00E5FF; --kg-bg:rgba(0,229,255,.06); --reps:#B57BFF; --reps-bg:rgba(181,123,255,.07);
   --hold:#FF3B3B; --hold-ink:#FFFFFF; --hold-btn:#D93030; --rest:#4D8BFF; --del:#C0605A;
   --flash:#FFFFFF; --rest-glow:drop-shadow(0 0 8px rgba(77,139,255,.6)); --hold-glow:drop-shadow(0 0 10px rgba(255,59,59,.55));
+  --ill-near:#F5F5F7; --ill-far:#BEBEC5; --ill-prop:#8E8E96; --ill-floor:#8E8E96; --ill-iron:#9E9EA6; --ill-ironin:#2A2A30; --ill-arrow:#3DFF8F;
   color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -120,9 +124,15 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .fname{font-size:30px;line-height:1.12;letter-spacing:-.03em;margin:6px 0 0}
 .how{margin:12px 0 0;font-size:14.5px;line-height:1.5;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .how.open{display:block}
-.fpic{margin:16px 0 0;border-radius:14px;background:var(--pic);border:1px solid var(--pic-line);box-shadow:none;overflow:hidden}
-.fpic img{display:block;width:100%;aspect-ratio:4/3;max-height:30vh;max-height:30dvh;object-fit:contain}
-.sheet-b .fpic img{max-height:38vh;max-height:38dvh}
+.ill{display:block}
+.ill svg{display:block;width:100%;height:100%}
+.ill-s-near{stroke:var(--ill-near)}.ill-f-near{fill:var(--ill-near)}.ill-s-far{stroke:var(--ill-far)}.ill-f-far{fill:var(--ill-far)}
+.ill-s-prop{stroke:var(--ill-prop)}.ill-f-prop{fill:var(--ill-prop)}.ill-s-floor{stroke:var(--ill-floor)}.ill-f-floor{fill:var(--ill-floor)}
+.ill-s-iron{stroke:var(--ill-iron)}.ill-f-iron{fill:var(--ill-iron)}.ill-s-ironin{stroke:var(--ill-ironin)}.ill-f-ironin{fill:var(--ill-ironin)}
+.ill-s-arrow{stroke:var(--ill-arrow)}.ill-f-arrow{fill:var(--ill-arrow)}
+.fpic{margin:16px 0 0;background:none;border:0;box-shadow:none}
+.fpic .ill{width:100%;aspect-ratio:4/3;max-height:30vh;max-height:30dvh}
+.sheet-b .fpic .ill{max-height:38vh;max-height:38dvh}
 .more{margin-top:4px;color:var(--ink)}
 .nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:22px 0 0}
 .num{min-width:0;border-radius:22px;padding:14px 14px 14px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--line)}
@@ -168,8 +178,8 @@ body.holding{overflow:hidden}
 .hov-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .hold-t{display:inline-block;font-size:clamp(44px,15vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;color:var(--hold)}
 .hov-of{font-size:14px;color:var(--mut);margin-top:6px}
-.hov-pic{flex:1 1 auto;min-height:0;max-height:min(18vh,130px);width:min(46vw,190px);border-radius:12px;background:var(--pic);border:1px solid var(--pic-line);box-shadow:none;overflow:hidden}
-.hov-pic img{display:block;width:100%;height:100%;object-fit:contain}
+.hov-pic{flex:1 1 auto;min-height:0;max-height:min(18vh,130px);width:min(46vw,190px);background:none;border:0;box-shadow:none;overflow:hidden}
+.hov-pic .ill{width:100%;height:100%}
 .hov-row{display:flex;gap:28px;align-items:center}
 .hov-row .link{font-size:15px;font-weight:600}
 .hov-row .mute{display:flex;align-items:center;gap:6px}
@@ -276,9 +286,9 @@ body.holding{overflow:hidden}
 .upnext{margin:22px 0 0;padding:16px;border-radius:24px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--neon)}
 .upnext.done{box-shadow:inset 0 0 0 1.5px var(--line)}
 .un-row{display:flex;gap:14px;align-items:center;min-width:0}
-.un-pic{flex:none;width:96px;height:72px;border-radius:10px;background:var(--pic);border:1px solid var(--pic-line);box-shadow:none;overflow:hidden}
-.un-pic img{display:block;width:100%;height:100%;object-fit:contain}
-.thumb{flex:none;width:60px;height:45px;border-radius:8px;background:var(--pic);border:1px solid var(--pic-line);object-fit:contain;display:block}
+.un-pic{flex:none;width:96px;height:72px;background:none;border:0;box-shadow:none}
+.un-pic .ill{width:100%;height:100%}
+.ill.thumb{flex:none;width:60px;height:45px}
 .un-txt{min-width:0}
 .un-eye{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--neon-txt)}
 .un-name{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-top:3px;overflow-wrap:anywhere}
@@ -449,7 +459,31 @@ function exById(id){
 }
 const slugOf = n => String(n).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 const imgOf = e => "images/" + (e && (typeof e.id === "number" || NGMAP[e.id]) ? slugOf(e.name) : "new-exercise") + ".svg";
-const picHTML = e => `<div class="fpic"><img src="${imgOf(e)}" alt="${esc(e.name)}"></div>`;
+// Illustrations are inlined (not <img>) so their colours follow the theme via --ill-* variables.
+const svgCache = new Map(), svgPending = new Map();
+function loadIll(url){
+  if(svgCache.has(url)) return Promise.resolve(svgCache.get(url));
+  if(svgPending.has(url)) return svgPending.get(url);
+  const pr = fetch(url).then(r=>r.ok ? r.text() : "").then(t=>{
+    const m = t.match(/<svg[\s\S]*<\/svg>/); let svg = m ? m[0] : "";
+    svg = svg.replace(/<style[\s\S]*?<\/style>/gi,"").replace(/<script[\s\S]*?<\/script>/gi,"").replace(/\son\w+="[^"]*"/gi,"");
+    svgCache.set(url, svg); svgPending.delete(url); return svg;
+  }).catch(()=>{ svgPending.delete(url); return ""; });
+  svgPending.set(url, pr); return pr;
+}
+// label: text for screen readers, or "" when the picture is decorative
+function illHTML(e, cls="", label=""){
+  const url = imgOf(e), svg = svgCache.get(url) || "";
+  return `<span class="ill ${cls}" data-ill="${url}"${label?"":` aria-hidden="true"`}>${svg}</span>`;
+}
+function hydrateIll(){
+  document.querySelectorAll(".ill[data-ill]").forEach(el=>{
+    if(el.firstElementChild) return;
+    const url = el.dataset.ill;
+    loadIll(url).then(svg=>{ if(svg && !el.firstElementChild) el.innerHTML = svg; });
+  });
+}
+const picHTML = e => `<div class="fpic">${illHTML(e, "", e.name)}</div>`;
 function gymExercises(){ return SEED.ex.map(exObj).concat(S.custom); }
 function nogymExercises(){ return NOGYM.map(ngObj); }
 function allExercises(){ return gymExercises().concat(nogymExercises()); }
@@ -956,7 +990,7 @@ function dockHTML(){
 function upNextHTML(k, allDone){
   if(allDone || k<0) return `<div class="upnext done"><div class="un-eye">All exercises done</div><div class="un-name">Nice work.</div><p class="un-sub">Finish the workout to save it and see your summary.</p></div>`;
   const e = exById(S.plan.items[k].ex) || {name:"Unknown", group:"other"};
-  return `<div class="upnext"><div class="un-row"><div class="un-pic"><img src="${imgOf(e)}" alt=""></div>
+  return `<div class="upnext"><div class="un-row"><div class="un-pic">${illHTML(e)}</div>
       <div class="un-txt"><div class="un-eye">Up next</div><div class="un-name">${esc(e.name)}</div><div class="un-sub">${esc(GROUPS[e.group]||"")}, ${S.plan.items[k].sets.length} ${S.plan.items[k].sets.length===1?"set":"sets"}</div></div></div>
     <button class="cta un-go" data-act="jump" data-i="${k}">Go to ${esc(e.name)}</button></div>`;
 }
@@ -985,7 +1019,7 @@ function viewExercises(){
     <div class="pad2"><input class="search" type="search" placeholder="Search" value="${esc(query)}" data-f="q" aria-label="Search exercises">
     <div class="chips">${["all",...ORDER,"nogym"].map(g=>`<button class="chip${filterGroup===g?" on":""}" data-act="fg" data-g="${g}">${g==="all"?"All":g==="nogym"?"No gym":GROUPS[g]}</button>`).join("")}</div></div>
     <section class="list">${list.map(e=>{const s=st[e.id]; const w = s ? fmtV(e.id,maxW(s.last)) : (e.startW? fmtV(e.id,e.startW):"");
-      return `<button class="row" data-act="detail" data-id="${e.id}"><img class="thumb" src="${imgOf(e)}" alt="" loading="lazy"><span class="nm">${esc(e.name)}<small>${e.nogym?`<span class="ngtag">No gym</span>`:""}${esc(muscleNames(musclesOf(e.id)).join(", ")||GROUPS[e.group])}${s?`, done ${s.count}×`:""}</small></span><span class="m"><b class="${s?"":"dim"}">${esc(w)}</b></span></button>`}).join("") || `<p class="lead">No exercises match. Try another word or pick All.</p>`}
+      return `<button class="row" data-act="detail" data-id="${e.id}">${illHTML(e, "thumb")}<span class="nm">${esc(e.name)}<small>${e.nogym?`<span class="ngtag">No gym</span>`:""}${esc(muscleNames(musclesOf(e.id)).join(", ")||GROUPS[e.group])}${s?`, done ${s.count}×`:""}</small></span><span class="m"><b class="${s?"":"dim"}">${esc(w)}</b></span></button>`}).join("") || `<p class="lead">No exercises match. Try another word or pick All.</p>`}
     <div class="list-foot"><button class="link" data-act="newex">Add a new exercise</button></div></section>`;
 }
 function viewHistory(){
@@ -1153,6 +1187,7 @@ function render(keepScroll=true){
   $app.innerHTML = (focus ? viewFocus() + holdOverlay() : tab==="today"?viewToday():tab==="exercises"?viewExercises():tab==="body"?viewBody():viewHistory()) + viewSheet();
   document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===tab?"page":"false"));
   if(keepScroll) window.scrollTo(0,y);
+  hydrateIll();
 }
 
 /* ---------- events ---------- */
@@ -1580,7 +1615,7 @@ function holdOverlay(){
       <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="trk" cx="100" cy="100" r="88"/><circle class="prog" id="holdRing" cx="100" cy="100" r="88" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-Math.min(1,held/hold.total))).toFixed(1)}" transform="rotate(-90 100 100)"/></svg>
       <div class="hov-c"><div class="hold-t${left<=5000&&!hold.paused?" last5":""}" id="holdT">${fmtT(left)}</div><div class="hov-of" id="holdOf">${hold.paused?"paused · ":""}of ${fmtT(hold.total)} hold</div></div>
     </div>
-    <div class="hov-pic"><img src="${imgOf(e)}" alt=""></div>
+    <div class="hov-pic">${illHTML(e)}</div>
     <div class="hov-row"><button class="link mute" data-act="mute" aria-pressed="${!m}">${m?"Sound off":"Sound on"}</button><button class="link" data-act="hold10">+10s</button></div>
     <div class="hov-btns"><button class="cta ghost" data-act="holdpause">${hold.paused?"Resume":"Pause"}</button><button class="cta hold-done" data-act="holdstop">Done early</button></div>
   </div></div>`;

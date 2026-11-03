@@ -17,7 +17,9 @@
   })();
 </script>
 <meta name="description" content="A simple training log with shuffled workouts, rest timer and weekly goals.">
-<meta name="theme-color" content="#000000">
+<!-- status bar colour follows the phone's light / dark mode (Android) -->
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -25,6 +27,33 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Training">
+<!-- iPhone launch screens (tools/make_splash.py): plain app background, no white flash -->
+<link rel="apple-touch-startup-image" href="icons/splash/light-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1260x2736.png" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/light-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1260x2736.png" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
+<link rel="apple-touch-startup-image" href="icons/splash/dark-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
@@ -67,12 +96,21 @@
 /* native feel: no zooming at all, by pinch or double-tap (scrolling and taps still work);
    applied to every element so it also holds inside scrolling sheets. Same fix as the Gitara app. */
 html,body,body *{touch-action:pan-x pan-y}
-/* native feel: long-pressing a control doesn't select text or open the iOS "Copy / Look Up" menu.
-   Text fields and the shared link stay selectable. */
-button,.nav,.chip,.chips,.cta,.pill,.row,.set,.sets,.step,.stepper,.segs,.ftop,.hero,.month,.weeks,.upnext,.update-bar,.utoast,.toast,.banner .b-acts,.ill,img,svg{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-img{-webkit-user-drag:none}
-input,textarea,select,[contenteditable],.qr-url{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
-html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+/* native feel: nothing can be selected or copied by long-press, anywhere (no iOS "Copy / Look Up"
+   menu, no Android selection handles). Only text you type and the shared app link stay selectable. */
+html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+img,svg{-webkit-user-drag:none}
+input,textarea,select,[contenteditable],.qr-url,.qr-url *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+/* native feel: the app frame never bounces or rubber-bands; phones never resize text on their own */
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overscroll-behavior:none}
+/* while a sheet or a timed hold is open, the screen behind it can't be scrolled */
+html.locked,html.locked body{overflow:hidden}
+/* native feel: buttons visibly react when pressed */
+button{transition:opacity .12s}
+button:not(.cta):not(:disabled):active{opacity:.55;transition:none}
+.step button:active,.nav button:active{opacity:1}
+.nav button:active svg,.nav button:active span{opacity:.55}
 body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:400 16px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 button,input{font:inherit;color:inherit}
@@ -413,7 +451,12 @@ body.focusing .nav{display:none}
 
 /* sheet */
 .sheet-bg{position:fixed;inset:0;background:rgb(0 0 0 / .6);z-index:30;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--bg);width:100%;max-width:520px;max-height:88vh;border-radius:24px 24px 0 0;border-top:1px solid var(--line);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px);animation:up .22s ease-out}
+.sheet{position:relative;background:var(--bg);width:100%;max-width:520px;max-height:88vh;border-radius:24px 24px 0 0;border-top:1px solid var(--line);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px);animation:up .22s ease-out}
+/* grab handle: drag the sheet down to close it */
+.sheet::before{content:"";position:absolute;top:7px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:var(--dim)}
+.sheet.settle{transition:transform .22s ease-out}
+.sheet-bg.closing{transition:opacity .2s;opacity:0}
+.sheet-b{overscroll-behavior:contain}
 @keyframes up{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
 .sheet-h{display:flex;align-items:center;gap:10px;padding:18px 16px 6px 24px}
 .sheet-h h2{flex:1}
@@ -889,7 +932,7 @@ let toastTimer;
 function prToast(pr){
   toast("New PR: "+pr.label);
   const t=document.querySelector(".toast"); if(t) t.classList.add("pr");
-  try{ navigator.vibrate && navigator.vibrate([60,40,60]); }catch(_){}
+  haptic([60,40,60]);
 }
 function toast(msg){
   document.querySelector(".toast")?.remove();
@@ -1658,7 +1701,32 @@ function render(keepScroll=true){
   if(keepScroll) window.scrollTo(0,y);
   hydrateIll();
   if(typeof syncUpdateBar==="function") syncUpdateBar();
+  document.documentElement.classList.toggle("locked", !!sheet || !!(focus && hold));
+  syncBack();
 }
+
+/* ---------- native back button / back gesture (Android) ----------
+   One extra history entry exists whenever the app isn't on Today with nothing open.
+   Back closes the top layer: a sheet, then the exercise screen, then the tab (to Today).
+   Only on Today does Back leave the app. Nothing is ever lost: sets are saved as they're logged. */
+let backGuard = false, ignorePops = 0;
+const atRoot = () => !sheet && !focus && tab==="today";
+function syncBack(){
+  try{
+    if(!atRoot() && !backGuard){ history.pushState({trainingBack:1}, "", location.href); backGuard = true; }
+    else if(atRoot() && backGuard){ backGuard = false; ignorePops++; history.back(); }
+  }catch(_){}
+}
+window.addEventListener("popstate", ()=>{
+  if(ignorePops > 0){ ignorePops--; try{ history.replaceState(null,"","#"+tab); }catch(_){} return; }
+  backGuard = false;
+  if(focus && hold){ toast("Finish this hold first"); syncBack(); return; }
+  const hadSheet = !!sheet;
+  if(sheet) sheet = null;
+  else if(focus){ focus = null; window.scrollTo(0,0); }
+  else if(tab!=="today"){ tab = "today"; try{ history.replaceState(null,"","#today"); }catch(_){} window.scrollTo(0,0); }
+  render(hadSheet);
+});
 
 /* ---------- events ---------- */
 function openFocus(i){ focus={i}; selSet=null; howOpen=false; render(false); window.scrollTo(0,0); }
@@ -1705,7 +1773,7 @@ $app.addEventListener("click", e=>{
     case "complete": case "done": doneSet(); break;
     case "editdone": { focus.edit=false; const k=S.plan.items[focus.i].sets.findIndex(x=>!x.done); selSet = k<0 ? null : k; render(); break; }
     case "undolast": undoLast(); break;
-    case "hold": { unlockAudio(); const s=S.plan.items[focus.i].sets[selSet], ms=(+s.w||30)*1000; s.w=+s.w||30;
+    case "hold": { unlockAudio(); haptic(); const s=S.plan.items[focus.i].sets[selSet], ms=(+s.w||30)*1000; s.w=+s.w||30;
       rest=null; hold={total:ms, elapsed:0, runStart:Date.now(), paused:false, i:focus.i, j:selSet}; holdWake(); persistPlan(); render(); break; }
     case "holdpause": if(hold){ if(hold.paused){ hold.runStart=Date.now(); hold.paused=false; holdWake(); } else { hold.elapsed=heldMs(); hold.paused=true; releaseWake(); } render(); } break;
     case "hold10": if(hold){ hold.total += 10000; tickHold(); } break;
@@ -1786,9 +1854,74 @@ $app.addEventListener("click", e=>{
     case "dorestore": if(sheet && sheet.type==="restore") applyRestore(sheet.data); break;
   }
 });
+/* ---------- native feel: sheets, scrolling, long-press, haptics ---------- */
+// Long-press never opens the browser menu (Android) — except on text you type and the shared link.
+document.addEventListener("contextmenu", e=>{ if(!e.target.closest("input,textarea,select,.qr-url")) e.preventDefault(); });
+// Nearest element that can actually scroll (a sheet's body, a long list in the hold pop-up...).
+function scrollerOf(el){
+  for(; el && el!==document.body && el!==document.documentElement; el=el.parentElement){
+    const oy = getComputedStyle(el).overflowY;
+    if((oy==="auto" || oy==="scroll") && el.scrollHeight > el.clientHeight + 1) return el;
+  }
+  return null;
+}
+// Drag a sheet down to close it (from its top, or from its content when that's scrolled to the top).
+let sd = null;
+document.addEventListener("touchstart", e=>{   // also makes :active press feedback work on iPhone
+  sd = null;
+  const sh = e.target.closest(".sheet"); if(!sh || e.touches.length>1 || e.target.closest("input,textarea,select")) return;
+  const body = sh.querySelector(".sheet-b"), inBody = !!(body && body.contains(e.target));
+  sd = {el:sh, body, inBody, x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), dy:0, active:false};
+}, {passive:true});
+document.addEventListener("touchmove", e=>{
+  if(e.touches.length>1) return;
+  if(sd){
+    const dx = e.touches[0].clientX-sd.x, dy = e.touches[0].clientY-sd.y;
+    if(!sd.active){
+      if(Math.abs(dy) < 8 && Math.abs(dx) < 8) return;
+      if(dy <= 0 || Math.abs(dx) > Math.abs(dy) || (sd.inBody && sd.body.scrollTop > 0)) sd = null;
+      else { sd.active = true; sd.el.classList.remove("settle"); sd.el.style.animation = "none"; }
+    }
+    if(sd && sd.active){
+      sd.dy = Math.max(0, dy); sd.el.style.transform = `translateY(${sd.dy}px)`;
+      if(e.cancelable) e.preventDefault();
+      return;
+    }
+  }
+  // With a sheet or a hold open, the screen behind never scrolls: only a scrollable area inside it does.
+  if(document.documentElement.classList.contains("locked") && !scrollerOf(e.target) && e.cancelable) e.preventDefault();
+}, {passive:false});
+function sheetDragEnd(){
+  const s = sd; sd = null; if(!s || !s.active) return;
+  const fast = s.dy > 40 && s.dy / Math.max(1, Date.now()-s.t) > 0.6;
+  s.el.classList.add("settle");
+  if(fast || s.dy > Math.min(140, s.el.offsetHeight*0.3)){
+    s.el.style.transform = "translateY(100%)"; s.el.parentElement.classList.add("closing");
+    setTimeout(()=>{ if(sheet){ sheet = null; render(); } }, 200);
+  } else s.el.style.transform = "";
+}
+document.addEventListener("touchend", sheetDragEnd);
+document.addEventListener("touchcancel", sheetDragEnd);
+// A short tap you can feel. Android vibrates; iPhone has no vibration for web apps, but since iOS 18
+// flipping a native switch gives a light tap, so a hidden one is flipped. Only works during a tap.
+let hapticEl = null;
+function haptic(ms=12){
+  try{ if(navigator.vibrate && navigator.vibrate(ms)) return; }catch(_){}
+  try{
+    if(!/iPhone|iPad|iPod/.test(navigator.userAgent) && !(navigator.maxTouchPoints>1 && /Mac/.test(navigator.platform))) return;
+    if(!hapticEl){
+      hapticEl = document.createElement("label"); hapticEl.setAttribute("aria-hidden","true");
+      hapticEl.style.cssText = "position:fixed;left:-100px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none";
+      const sw = document.createElement("input"); sw.type = "checkbox"; sw.setAttribute("switch",""); sw.tabIndex = -1;
+      hapticEl.appendChild(sw); document.body.appendChild(hapticEl);
+    }
+    hapticEl.click();
+  }catch(_){}
+}
+
 // swipe between exercises in focus mode
 let tx=null, ty=null;
-$app.addEventListener("touchstart", e=>{ if(!focus || hold || e.target.closest("input,button")) { tx=null; return; } tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, {passive:true});
+$app.addEventListener("touchstart", e=>{ if(!focus || hold || sheet || e.target.closest("input,button")) { tx=null; return; } tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, {passive:true});
 $app.addEventListener("touchend", e=>{
   if(tx===null || !focus) return;
   const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty; tx=null;
@@ -2047,7 +2180,7 @@ function doneSet(){
   snapshotForUndo();
   completeAt(i, j);
   justDone = {i, j};
-  try{ navigator.vibrate && navigator.vibrate(35); }catch(_){}
+  haptic(35);
   const what = isTimed(it.ex) ? `${+v.w||0} s` : `${+v.w ? r1(+v.w)+" kg × " : ""}${+v.r||0}${+v.w?"":" reps"}`;
   if(label==="Finish workout"){
     const sess = finish(true);
@@ -2068,6 +2201,7 @@ function showUndo(msg){
 }
 function undoLast(){
   const u = undoState; if(!u) return;
+  haptic();
   undoState = null; clearTimeout(undoTimer); document.querySelector(".utoast")?.remove();
   if(u.session){                                   // the workout was just saved: take it back out
     S.sessions = S.sessions.filter(x=>x.id!==u.session); histVer++;

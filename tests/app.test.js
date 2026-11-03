@@ -273,6 +273,38 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- language: English / Serbian
+  console.log("language: English and Serbian");
+  {
+    const { ctx, page } = await open(browser, URL, busy, { mobile: true, w: 320, h: 568 });
+    const before = JSON.stringify((await stored(page)).sessions);
+    check("the app starts in English", (await page.evaluate(() => LANG)) === "en" && (await page.textContent('[data-tab="today"]')).includes("Today"));
+    await page.click('[data-act="settings"]');
+    check("Settings has English and Srpski", !!(await page.$('[data-act="lang"][data-v="en"].on')) && !!(await page.$('[data-act="lang"][data-v="sr"]')));
+    await page.click('[data-act="lang"][data-v="sr"]');
+    check("switching to Serbian changes the screen at once", /Podešavanja/.test(await page.textContent("h1")) && (await page.textContent('[data-tab="today"]')).includes("Danas") && (await page.getAttribute("html", "lang")) === "sr-Latn");
+    check("language choice is saved", (await stored(page)).settings.lang === "sr");
+    await page.reload();
+    check("Serbian is kept after reopening the app", (await page.textContent('[data-tab="history"]')).includes("Istorija"));
+    const plu = await page.evaluate(() => [plu(1, "workout"), plu(3, "workout"), plu(5, "workout"), plu(21, "workout"), plu(12, "workout"), plu(2, "exercise"), plu(7, "exercise"), plu(22, "set")].join(","));
+    check("Serbian plurals are right", plu === "trening,treninga,treninga,trening,treninga,vežbe,vežbi,serije", plu);
+    check("every exercise has a Serbian description", await page.evaluate(() => allExercises().every(e => !e.desc || (SR_DESC[String(e.id)] && exDesc(e) !== e.desc))));
+    check("exercise names stay in English", await page.evaluate(() => exById(0).name === "Bench press"));
+    check("dates are written in Serbian", /novembar|decembar|januar|februar|mart|april|maj|jun|jul|avgust|septembar|oktobar/.test(await page.evaluate(() => longDate())));
+    for (const tb of ["today", "exercises", "history", "body"]) {
+      await page.click(`[data-tab="${tb}"]`);
+      const body = await page.evaluate(() => document.querySelector("main").innerText + document.querySelector(".nav").innerText);
+      check(`Serbian ${tb}: no broken text or sideways scroll at 320 px`, !/\$\{|\{[a-z]+\}|undefined|NaN/.test(body) && await noOverflow(page));
+    }
+    await page.click('[data-tab="today"]'); await page.click('[data-act="open"][data-i="0"]');
+    check("Serbian exercise screen", /Gotovo, serija 1/.test(await page.textContent("#ctaBox")) && await noOverflow(page));
+    await page.click('[data-act="back"]'); await page.click('[data-act="settings"]'); await page.click('[data-act="lang"][data-v="en"]');
+    check("switching back to English works", /Settings/.test(await page.textContent("h1")) && (await stored(page)).settings.lang === "en");
+    check("switching language never changes the workouts", JSON.stringify((await stored(page)).sessions) === before);
+    check("language: no page errors", page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- backup
   console.log("backup and restore");
   {

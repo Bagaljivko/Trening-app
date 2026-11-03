@@ -1498,6 +1498,15 @@ def ng_ham_slide():
     return d
 
 
+def ng_heel_bridge():
+    d = dict(N=(125, 250), P=(200, 212), H=(100, 244),
+             legs=[((252, 184), (300, 194)), ((256, 188), (306, 194))],
+             arms=[((160, 260), (196, 262)), ((164, 262), (200, 264))])
+    d["props"] = [chair(284, 352, 198, "right")]
+    d["arrows"] = [("L", 200, 196, 200, 140)]
+    return d
+
+
 def ng_hip_hinge():
     d = ex_single_leg_dl()
     d.pop("back", None)
@@ -1548,6 +1557,7 @@ NOGYM_DRAW = {
     "Single-leg glute bridge": ng_glute_bridge,
     "Towel hamstring slide": ng_ham_slide,
     "Single-leg hip hinge": ng_hip_hinge,
+    "Hamstring bridge, heels on a chair": ng_heel_bridge,
     "Forearm plank": lambda: ex_plank("forearm"),
     "Dead bug": ng_dead_bug,
     "Mountain climbers": ng_mountain,

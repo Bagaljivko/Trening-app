@@ -27,6 +27,7 @@ function serve() {
   return new Promise(res => {
     const srv = http.createServer((req, rsp) => {
       const p = decodeURIComponent(req.url.split("?")[0].split("#")[0]);
+      if (p === "/sw.js" && serve.swOverride) { rsp.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-store" }); return rsp.end(serve.swOverride); }
       const f = path.join(ROOT, p === "/" ? "index.html" : p);
       if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { rsp.writeHead(404); return rsp.end(); }
       rsp.writeHead(200, { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream" });
@@ -225,6 +226,101 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
       check("update check answers without a service worker", /Reload the page|latest/.test((await page.textContent(".toast")) || ""));
       check("QR encoder makes a valid 37x37 code for the app link", await page.evaluate(() => /viewBox="0 0 37 37"/.test(qrSVG("https://bagaljivko.github.io/Trening-app/"))));
     }
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------- data safety
+  console.log("data safety");
+  {
+    const { ctx, page } = await open(browser, URL, null);
+    await page.evaluate(() => { localStorage.clear(); localStorage.setItem("training-log-v1", '{"sessions":[{"id":"x"'); });
+    await page.reload();
+    check("unreadable data shows a warning", !!(await page.$(".banner.bad")));
+    await page.click('[data-act="gen"]');
+    check("unreadable data is never overwritten", (await page.evaluate(() => localStorage.getItem("training-log-v1"))) === '{"sessions":[{"id":"x"');
+    check("unreadable data is also kept as a copy", (await page.evaluate(() => localStorage.getItem("training-log-v1.unreadable"))) === '{"sessions":[{"id":"x"');
+    await page.evaluate(() => { localStorage.setItem("training-log-v1", JSON.stringify({ sessions: [{ id: "a", date: new Date().toISOString(), v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8 }] }] }], settings: { count: 7, lastExport: Date.now() } })); });
+    await page.reload(); await page.waitForTimeout(500);
+    const sn = await page.evaluate(async () => (await snapList()).map(x => x.reason));
+    check("a safety copy is made before the data format upgrade and daily", sn.includes("upgrade") && sn.includes("daily"), sn.join(","));
+    check("data carries a version number", (await stored(page)).schema === 1);
+    await page.evaluate(() => { S.sessions = []; saveLocal(); });
+    await page.evaluate(() => openSnapshots()); await page.waitForTimeout(300);
+    let daily = null;
+    for (const r of await page.$$('[data-act="usesnap"]')) if (/Daily copy/.test(await r.innerText())) { daily = r; break; }
+    await Promise.all([page.waitForNavigation(), daily.click()]);
+    check("a safety copy brings lost workouts back", (await stored(page)).sessions.length === 1);
+    await page.evaluate(() => { window.__set = Storage.prototype.setItem; Storage.prototype.setItem = function () { const e = new Error("full"); e.name = "QuotaExceededError"; throw e; }; S.settings.count = 6; saveLocal(); });
+    await page.waitForTimeout(100);
+    check("a failed save is reported", /couldn't be saved/.test((await page.textContent(".banner.bad")) || ""));
+    await page.evaluate(() => { Storage.prototype.setItem = window.__set; });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------- Google Drive (stand-in Google)
+  console.log("Google Drive backup");
+  {
+    const files = {}; let n = 0;
+    const handler = async route => {
+      const req = route.request(), u = new globalThis.URL(req.url()), json = (o, s = 200) => route.fulfill({ status: s, contentType: "application/json", body: JSON.stringify(o) });
+      if (u.pathname.endsWith("/about")) return json({ user: { emailAddress: "tester@example.com" } });
+      let id = (u.pathname.match(/\/files\/([^/]+)$/) || [])[1];
+      if (u.pathname.startsWith("/upload/")) {
+        const parts = req.postDataBuffer().toString("utf8").split(/--training[a-z0-9]+/);
+        const meta = JSON.parse(parts[1].split("\r\n\r\n")[1]);
+        if (!id) { id = "f" + (++n); files[id] = { id, name: meta.name }; }
+        files[id].content = parts[2].split("\r\n\r\n").slice(1).join("\r\n\r\n").replace(/\r\n$/, ""); files[id].modifiedTime = new Date().toISOString();
+        return json({ id, modifiedTime: files[id].modifiedTime });
+      }
+      if (req.method() === "POST" && u.pathname.endsWith("/files")) { const meta = req.postDataJSON(); id = "d" + (++n); files[id] = { id, name: meta.name, folder: true }; return json({ id }); }
+      if (id && u.searchParams.get("alt") === "media") return route.fulfill({ status: 200, contentType: "application/json", body: files[id].content });
+      if (id) return files[id] ? json({ id, trashed: false }) : json({ error: { message: "nf" } }, 404);
+      const name = ((u.searchParams.get("q") || "").match(/name='([^']+)'/) || [])[1];
+      return json({ files: Object.values(files).filter(f => f.name === name).map(f => ({ id: f.id, name: f.name, modifiedTime: f.modifiedTime || new Date().toISOString() })) });
+    };
+    const gis = () => { window.google = { accounts: { oauth2: { initTokenClient: cfg => ({ requestAccessToken: () => setTimeout(() => cfg.callback({ access_token: "tok", expires_in: 3600 }), 5) }), hasGrantedAllScopes: () => true, revoke: () => {} } } }; };
+    const backup = () => { const f = Object.values(files).find(x => x.name === "training-log-backup.json"); return f && JSON.parse(f.content); };
+    const seed = baseSeed({ sessions: [{ id: "a", date: day(3), v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8 }] }] }], plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 62.5, r: 8, done: false }, { w: 62.5, r: 8, done: false }] }] } });
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 667 }, serviceWorkers: "block" });
+    await ctx.route("https://www.googleapis.com/**", handler); await ctx.addInitScript(gis);
+    const page = await ctx.newPage(); page.on("dialog", d => d.accept());
+    await page.goto(URL); await page.evaluate(s => localStorage.setItem("training-log-v1", JSON.stringify(s)), seed); await page.reload();
+    await page.click('[data-tab="history"]'); await page.click('[data-act="driveconnect"]'); await page.waitForTimeout(800);
+    check("connecting Drive makes a first backup", backup() && backup().sessions.length === 1 && Object.values(files).some(f => f.folder && f.name === "Training log"));
+    const ups = () => Object.values(files).find(x => x.name === "training-log-backup.json").modifiedTime;
+    const u0 = ups();
+    await page.click('[data-tab="today"]'); await page.click('[data-act="open"][data-i="0"]'); await page.click('#ctaBox [data-act="done"]'); await page.waitForTimeout(4800);
+    check("no Drive upload for a set mid-workout", ups() === u0);
+    await page.click('#ctaBox [data-act="done"]'); await page.waitForTimeout(5200);
+    check("finished workout is backed up to Drive", backup().sessions.length === 2);
+    await ctx.close();
+    const ctx2 = await browser.newContext({ viewport: { width: 375, height: 667 }, serviceWorkers: "block" });
+    await ctx2.route("https://www.googleapis.com/**", handler); await ctx2.addInitScript(gis);
+    const p2 = await ctx2.newPage(); p2.on("dialog", d => d.accept());
+    await p2.goto(URL); await p2.click('[data-tab="history"]'); await p2.click('[data-act="driveconnect"]');
+    await p2.waitForSelector('[data-act="dorestore"]', { timeout: 5000 }); await p2.click('[data-act="dorestore"]'); await p2.waitForTimeout(400);
+    check("a new phone gets its history back from Drive", (await p2.evaluate(() => S.sessions.length)) === 2);
+    await ctx2.close();
+  }
+
+  // ---------------------------------------------------------------- updates (real service worker)
+  console.log("updates wait for Reload and leave Gitara alone");
+  {
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 667 } });
+    const page = await ctx.newPage();
+    await page.goto(URL); await page.evaluate(async () => { await navigator.serviceWorker.ready; }); await page.reload();
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+    await page.evaluate(async () => { const c = await caches.open("gitara-v1"); await c.put("/Gitara/index.html", new Response("gitara")); });
+    serve.swOverride = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8").replace(/training-v\d+/, "training-v999");   // "publish" a new version
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await page.waitForSelector("#updateBar", { timeout: 30000 });
+    check("a new version waits instead of taking over", await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration()).waiting));
+    await Promise.all([page.waitForNavigation({ timeout: 30000 }), page.click("#updateBar button")]);
+    await page.waitForTimeout(500);
+    const keys = await page.evaluate(() => caches.keys());
+    check("Reload switches to the new version", keys.includes("training-v999"), keys.join(","));
+    check("an update never deletes Gitara's offline files", keys.includes("gitara-v1"), keys.join(","));
+    serve.swOverride = null;
     await ctx.close();
   }
 

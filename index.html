@@ -281,6 +281,7 @@ body.holding{overflow:hidden}
 .rest-b .mute{display:flex;align-items:center;gap:6px}
 .rest-b .mute svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nums.one{grid-template-columns:1fr}
+.link.addkg{display:inline-block;margin-top:12px;color:var(--kg);font-weight:600;font-size:15px;padding:6px 0}
 .nums.one .step button{max-width:none;padding:0 18px;font-size:16px;font-weight:600}
 .cta.go{animation:go 1.2s ease-in-out infinite}
 @keyframes go{50%{box-shadow:0 0 38px rgba(61,255,143,.65);transform:scale(1.015)}}
@@ -291,6 +292,7 @@ body.holding{overflow:hidden}
 .un-pic{flex:none;width:96px;height:72px;background:none;border:0;box-shadow:none}
 .un-pic .ill{width:100%;height:100%}
 .ill.thumb{flex:none;width:60px;height:45px}
+.row[hidden],.lead[hidden]{display:none}
 .un-txt{min-width:0}
 .un-eye{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--neon-txt)}
 .un-name{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-top:3px;overflow-wrap:anywhere}
@@ -315,8 +317,8 @@ body.holding{overflow:hidden}
 .stats.sm{margin:20px 0 0;gap:26px}
 .stats.sm b{font-size:40px}
 .weeks{display:flex;gap:6px;margin:28px 24px 0;height:48px;align-items:flex-end}
-.wk{flex:1;display:flex;flex-direction:column-reverse;gap:3px}
-.wk i{height:12px;border-radius:3px;background:var(--s2)}
+.wk{flex:1;height:100%;display:flex;flex-direction:column-reverse;gap:3px}
+.wk i{flex:1;min-height:3px;border-radius:3px;background:var(--s2)}
 .wk i.on{background:var(--neon)}
 .wl{display:flex;justify-content:space-between;margin:8px 24px 0;font-size:11px;color:var(--mut)}
 .sess{border-bottom:1px solid var(--line)}
@@ -331,6 +333,8 @@ body.holding{overflow:hidden}
 .sess .link{display:block;margin:0 0 14px}
 .settings{margin:36px 24px 0;padding-top:20px;border-top:1px solid var(--line)}
 .srow{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:16px;font-size:15px}
+.srow.col{flex-direction:column;align-items:stretch;gap:0}
+.srow.col .chips.wrap{margin-top:10px}
 .stepper{display:flex;align-items:center;gap:14px}
 .stepper button{width:40px;height:40px;border-radius:20px;border:1px solid var(--line);font-size:20px;font-weight:300}
 .stepper output{font-size:22px;font-weight:300;min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
@@ -340,6 +344,8 @@ h2.sub{font-size:16px;margin:28px 0 0}
 .banner{margin:18px 24px 0;padding:14px 16px;border:1px solid var(--neon-d);background:var(--s1);border-radius:20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 .banner p{flex:1 1 170px;margin:0;font-size:14px;line-height:1.4}
 .banner p small{display:block;color:var(--mut);font-size:12.5px}
+.bkstat .good{color:var(--neon-txt)}
+.b-acts{display:flex;align-items:center;gap:4px;margin-left:auto}
 .pill{height:38px;padding:0 16px;border-radius:19px;background:var(--neon);color:var(--neon-ink);font-weight:700;font-size:14px;white-space:nowrap}
 .bstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:24px 24px 0}
 .bstats div{display:flex;flex-direction:column;min-width:0}
@@ -427,8 +433,8 @@ let S = {sessions:[], plan:null, settings:{count:7}, custom:[], updated:0, profi
 let openHow = new Set(); let focus = null; let selSet = null; let howOpen = false;
 let rest = null, hold = null, actx = null, wakeLock = null;
 let tab = "today", filterGroup = "all", query = "", sheet = null;
-let nogymNext = false;   // "No gym" picked before building; never saved, so the next workout starts as gym
-let db = null, uid = null, saveTimer = null;
+let nogymNext = false;
+let histShown = 20;      // History shows the newest 20 workouts, then "Show more"   // "No gym" picked before building; never saved, so the next workout starts as gym
 
 /* ---------- data ---------- */
 function loadLocal(){
@@ -441,13 +447,6 @@ function myNumbered(){ return S.sessions.slice().sort((a,b)=>a.date.localeCompar
 function sessionTitle(s){
   if(s.seed) return "Spreadsheet workout T"+s.label;
   return "Workout "+(myNumbered().findIndex(x=>x.id===s.id)+1);
-}
-function progress(){
-  const now = new Date();
-  const wk = new Date(now); wk.setHours(0,0,0,0); wk.setDate(wk.getDate()-((wk.getDay()+6)%7));
-  const mo = new Date(now.getFullYear(), now.getMonth(), 1);
-  const ds = S.sessions.map(s=>new Date(s.date));
-  return {week:ds.filter(d=>d>=wk).length, month:ds.filter(d=>d>=mo).length, total:S.sessions.length};
 }
 function saveLocal(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
@@ -475,14 +474,20 @@ function loadIll(url){
 }
 // label: text for screen readers, or "" when the picture is decorative
 function illHTML(e, cls="", label=""){
-  const url = imgOf(e), svg = svgCache.get(url) || "";
+  const url = imgOf(e), svg = /\blazy\b/.test(cls) ? "" : (svgCache.get(url) || "");
   return `<span class="ill ${cls}" data-ill="${url}"${label?"":` aria-hidden="true"`}>${svg}</span>`;
 }
+function fillIll(el){
+  if(el.firstElementChild) return;
+  const url = el.dataset.ill;
+  loadIll(url).then(svg=>{ if(svg && !el.firstElementChild) el.innerHTML = svg; });
+}
+// List thumbnails ("lazy") are only drawn when they come near the screen.
+const illObserver = "IntersectionObserver" in window ? new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting){ illObserver.unobserve(en.target); fillIll(en.target); } }), {rootMargin:"400px 0px"}) : null;
 function hydrateIll(){
   document.querySelectorAll(".ill[data-ill]").forEach(el=>{
     if(el.firstElementChild) return;
-    const url = el.dataset.ill;
-    loadIll(url).then(svg=>{ if(svg && !el.firstElementChild) el.innerHTML = svg; });
+    if(illObserver && el.classList.contains("lazy")) illObserver.observe(el); else fillIll(el);
   });
 }
 const picHTML = e => `<div class="fpic">${illHTML(e, "", e.name)}</div>`;
@@ -731,50 +736,10 @@ function swap(i){
   persistPlan(); render();
 }
 
-/* ---------- persistence ---------- */
-function persistPlan(){
-  S.updated = Date.now(); saveLocal();
-  if(!db) return;
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(()=>{ ref("plan").set({plan:S.plan, updated:S.updated}).catch(()=>{}); }, 900);
-}
-function persistSettings(){
-  saveLocal();
-  if(db) ref("settings").set({settings:S.settings, custom:S.custom, profile:S.profile, weighins:S.weighins}).catch(()=>{});
-}
-function ref(id){ return db.collection("data/users/"+uid).doc(id); }
-async function persistSession(s){
-  saveLocal();
-  if(!db) return;
-  try{ await ref("s-"+s.id).set({session:s}); }
-  catch(e){ if(e && e.code==="quota_exceeded") toast("Cloud storage is full. Saved on this phone only."); }
-}
-async function connect(){
-  if(!window.claude || !window.claude.use) return;
-  try{
-    const [d,u] = await Promise.all([claude.use("db"), claude.use("user")]);
-    if(!d || !u) return;
-    const id = await u.id(); if(!id) return;
-    db = d; uid = id;
-    const snap = await db.collection("data/users/"+uid).get();
-    let changed = false, cloudPlan = null;
-    const have = new Set(S.sessions.map(s=>s.id));
-    snap.docs.forEach(doc=>{
-      const v = doc.data(); if(!v) return;
-      if(doc.id==="plan") cloudPlan = v;
-      else if(doc.id==="settings"){ if(v.settings) S.settings = Object.assign(S.settings, v.settings);
-        (v.custom||[]).forEach(c=>{ if(!S.custom.find(x=>x.id===c.id)) S.custom.push(c); });
-        if(v.profile && !Object.keys(S.profile).length) S.profile = v.profile;
-        (v.weighins||[]).forEach(w=>{ if(w && w.id && !S.weighins.find(x=>x.id===w.id)) S.weighins.push(w); }); changed = true; }
-      else if(doc.id.startsWith("s-") && v.session && !have.has(v.session.id)){ S.sessions.push(migrate(v.session)); changed = true; }
-    });
-    if(cloudPlan && (cloudPlan.updated||0) > (S.updated||0)){ S.plan = migrate(cloudPlan.plan); S.updated = cloudPlan.updated; changed = true; }
-    // push anything only on this phone
-    const cloudIds = new Set(snap.docs.map(d=>d.id));
-    for(const s of S.sessions) if(!cloudIds.has("s-"+s.id)) await ref("s-"+s.id).set({session:s}).catch(()=>{});
-    if(changed){ saveLocal(); render(); }
-  }catch(e){ db = null; }
-}
+/* ---------- persistence (this phone only; Export/Import moves data between phones) ---------- */
+function persistPlan(){ S.updated = Date.now(); saveLocal(); }
+function persistSettings(){ saveLocal(); }
+function persistSession(s){ saveLocal(); }
 
 /* ---------- helpers ---------- */
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -821,8 +786,9 @@ function weekCounts(n){
 }
 function streak(){
   const w = weekCounts(52); let i = w.length-1, n = 0;
-  if(w[i] < 3) i--;               // this week still in progress
-  for(; i>=0 && w[i]>=3; i--) n++;
+  const g = weekGoal();
+  if(w[i] < g) i--;               // this week still in progress
+  for(; i>=0 && w[i]>=g; i--) n++;
   return n;
 }
 function progress(){
@@ -834,13 +800,15 @@ function arc(cx,cy,r,a0,a1){
   const [x0,y0]=p(a0),[x1,y1]=p(a1);
   return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
 }
+const weekGoal = () => Math.max(1, Math.min(7, +S.settings.weekGoal || 3));
+const monthGoal = () => Math.max(1, Math.min(31, +S.settings.monthGoal || 12));
 function ringSVG(lit){
-  let s=""; const g=22;
-  for(let k=0;k<3;k++){ const a0=k*120-60+g/2, a1=(k+1)*120-60-g/2;
+  let s=""; const n = weekGoal(), step = 360/n, g = n>4 ? 14 : 22;
+  for(let k=0;k<n;k++){ const a0=k*step-step/2+g/2, a1=(k+1)*step-step/2-g/2;
     s+=`<path d="${arc(130,130,112,a0,a1)}" class="${k<lit?"seg on":"seg"}"/>`; }
   return `<svg viewBox="0 0 260 260" aria-hidden="true">${s}</svg>`;
 }
-function weekLabel(n){ return n>=3 ? "goal hit this week" : "this week"; }
+function weekLabel(n){ return n>=weekGoal() ? "goal hit this week" : "this week"; }
 
 /* ---------- body tracking ---------- */
 const ymd = d => { const x = new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); };
@@ -869,11 +837,34 @@ function weighInDue(){
   const d = daysSince(w[w.length-1].date);
   return d >= 7 ? {first:false, days:d} : null;
 }
+/* ---------- keeping the data safe ---------- */
+// Ask the browser not to clear this app's storage on its own (granted for home-screen apps and frequently used sites).
+let storageState = "unknown";
+async function protectStorage(){
+  try{
+    if(!navigator.storage || !navigator.storage.persist) return;
+    storageState = (await navigator.storage.persisted()) || (await navigator.storage.persist()) ? "protected" : "not protected";
+  }catch(_){}
+  if(tab==="history" && !focus) render();
+}
+function backupDue(){
+  const n = S.sessions.length, st = S.settings;
+  if(n < 3 || (st.bkSnooze && Date.now() < st.bkSnooze)) return null;
+  if(!st.lastExport) return {never:true, n};
+  const days = Math.floor((Date.now()-st.lastExport)/864e5), since = n - (st.lastExportCount||0);
+  return days >= 14 && since > 0 ? {never:false, days, since} : null;
+}
+function backupBanner(){
+  const d = backupDue(); if(!d) return "";
+  const msg = d.never ? `Your ${d.n} workouts are only saved on this phone` : `Last backup ${d.days} days ago, ${d.since} new workout${d.since>1?"s":""} since`;
+  return `<div class="banner bk" role="status"><p>${msg}<small>Export a backup file so nothing gets lost.</small></p>
+    <span class="b-acts"><button class="pill" data-act="export">Export</button><button class="iconbtn" data-act="bksnooze" aria-label="Remind me in 3 days">${ICON.x}</button></span></div>`;
+}
 function weighBanner(){
   const due = weighInDue(); if(!due || S.settings.wiSnooze===ymd(new Date())) return "";
   const msg = due.first ? "Log your first weigh-in" : `Your last weigh-in was ${due.days} days ago`;
   return `<div class="banner" role="status"><p>${msg}<small>A quick weekly weigh-in keeps your chart honest.</small></p>
-    <button class="pill" data-act="weighin">Weigh in</button><button class="iconbtn" data-act="wisnooze" aria-label="Hide until tomorrow">${ICON.x}</button></div>`;
+    <span class="b-acts"><button class="pill" data-act="weighin">Weigh in</button><button class="iconbtn" data-act="wisnooze" aria-label="Hide until tomorrow">${ICON.x}</button></span></div>`;
 }
 const canNotify = () => "Notification" in window && "serviceWorker" in navigator;
 async function toggleNotify(){
@@ -903,15 +894,15 @@ document.addEventListener("visibilitychange", checkNotify);
 const longDate = () => new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"});
 function heroBlock(){
   const p = progress(), mName = new Date().toLocaleDateString(undefined,{month:"long"});
-  const pct = Math.min(100, Math.round(p.month/12*100));
-  return `<div class="hero" role="img" aria-label="${p.week} of 3 workouts this week">${ringSVG(Math.min(3,p.week))}
-      <div class="hero-c"><div class="hero-n">${p.week}<span>/3</span></div><div class="hero-l">${weekLabel(p.week)}</div></div></div>
-    <div class="month"><span>${esc(mName)}</span><div class="mbar" role="progressbar" aria-label="Workouts this month" aria-valuemin="0" aria-valuemax="12" aria-valuenow="${p.month}"><i style="width:${pct}%" class="${p.month>=12?"met":""}"></i></div><b>${p.month}</b><span>of 12</span></div>`;
+  const wg = weekGoal(), mg = monthGoal(), pct = Math.min(100, Math.round(p.month/mg*100));
+  return `<div class="hero" role="img" aria-label="${p.week} of ${wg} workouts this week">${ringSVG(Math.min(wg,p.week))}
+      <div class="hero-c"><div class="hero-n">${p.week}<span>/${wg}</span></div><div class="hero-l">${weekLabel(p.week)}</div></div></div>
+    <div class="month"><span>${esc(mName)}</span><div class="mbar" role="progressbar" aria-label="Workouts this month" aria-valuemin="0" aria-valuemax="${mg}" aria-valuenow="${p.month}"><i style="width:${pct}%" class="${p.month>=mg?"met":""}"></i></div><b>${p.month}</b><span>of ${mg}</span></div>`;
 }
 function itemState(it){ const d=it.sets.filter(s=>s.done).length; return {d, n:it.sets.length, all:d===it.sets.length}; }
 function viewToday(){
   const num = S.sessions.length + 1;
-  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>` + weighBanner();
+  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>` + (backupBanner() || weighBanner());
   if(!S.plan || !S.plan.items.length){
     const last = allSessions().slice(-1)[0];
     const rec = muscleNames(recentMuscles());
@@ -966,6 +957,12 @@ function viewFocus(){
     <div class="fdock"><div id="ctaBox">${cta}</div></div>
   </div>`;
 }
+// Bodyweight: no equipment, no weight in this workout or ever before (a weighted vest or backpack can be added).
+function isBodyweight(it){
+  if(isTimed(it.ex) || equipOf(it.ex)) return false;
+  if(it.sets.some(x=>(+x.w||0)>0)) return false;
+  return !historyFor(it.ex).some(h=>maxW(h.it)>0);
+}
 // Weight and reps as two separate cards (or one card of seconds for timed exercises).
 // What the primary button does for the current set.
 function doneLabel(){
@@ -1003,6 +1000,8 @@ function numCards(it, i, j, s){
       <div class="u">${unit}</div>
       <div class="step"><button data-act="nudge" data-f="${f}" data-d="-1" aria-label="${ml}">${minus}</button><button data-act="nudge" data-f="${f}" data-d="1" aria-label="${pl}">${plus}</button></div></div>`;
   if(isTimed(it.ex)) return `<div class="nums one">${card("secs","w","numeric",s.w,"30","seconds","Seconds","−5","+5","5 seconds less","5 seconds more")}</div>`;
+  if(isBodyweight(it) && !it.addKg) return `<div class="nums one">${card("reps","r","numeric",s.r,"0","reps","Reps","−","+","Fewer reps","More reps")}</div>
+    <button class="link addkg" data-act="addkg" data-i="${i}">+ Add weight</button>`;
   return `<div class="nums">${card("kg","w","decimal",s.w,"0","kg","Weight in kg","−","+","Less weight","More weight")}${card("reps","r","numeric",s.r,"0","reps","Reps","−","+","Fewer reps","More reps")}</div>`;
 }
 function exStats(){
@@ -1013,21 +1012,29 @@ function exStats(){
   }));
   return st;
 }
+function exMatches(e, q){ return !q || e.name.toLowerCase().includes(q); }
+// Typing in the search only hides/shows rows that are already there (no full redraw per letter).
+function applyExFilter(){
+  const q = query.trim().toLowerCase(); let shown = 0;
+  document.querySelectorAll(".exrow").forEach(r=>{ const on = !q || r.dataset.name.includes(q); r.hidden = !on; if(on) shown++; });
+  const none = document.getElementById("ex-none"); if(none) none.hidden = shown>0;
+  hydrateIll();
+}
 function viewExercises(){
   const st = exStats(); const q = query.trim().toLowerCase();
-  const list = allExercises().filter(e=>(filterGroup==="all"||(filterGroup==="nogym"?e.nogym:e.group===filterGroup)) && (!q || e.name.toLowerCase().includes(q)))
+  const list = allExercises().filter(e=>(filterGroup==="all"||(filterGroup==="nogym"?e.nogym:e.group===filterGroup)))
     .sort((a,b)=>(st[b.id]?.count||0)-(st[a.id]?.count||0) || (b.freq||0)-(a.freq||0));
   return `<header class="pad"><div class="eyebrow">${allExercises().length} exercises</div><h1>Exercises</h1></header>
     <div class="pad2"><input class="search" type="search" placeholder="Search" value="${esc(query)}" data-f="q" aria-label="Search exercises">
     <div class="chips">${["all",...ORDER,"nogym"].map(g=>`<button class="chip${filterGroup===g?" on":""}" data-act="fg" data-g="${g}">${g==="all"?"All":g==="nogym"?"No gym":GROUPS[g]}</button>`).join("")}</div></div>
     <section class="list">${list.map(e=>{const s=st[e.id]; const w = s ? fmtV(e.id,maxW(s.last)) : (e.startW? fmtV(e.id,e.startW):"");
-      return `<button class="row" data-act="detail" data-id="${e.id}">${illHTML(e, "thumb")}<span class="nm">${esc(e.name)}<small>${e.nogym?`<span class="ngtag">No gym</span>`:""}${esc(muscleNames(musclesOf(e.id)).join(", ")||GROUPS[e.group])}${s?`, done ${s.count}×`:""}</small></span><span class="m"><b class="${s?"":"dim"}">${esc(w)}</b></span></button>`}).join("") || `<p class="lead">No exercises match. Try another word or pick All.</p>`}
+      return `<button class="row exrow" data-act="detail" data-id="${e.id}" data-name="${esc(e.name.toLowerCase())}"${exMatches(e,q)?"":" hidden"}>${illHTML(e, "thumb lazy")}<span class="nm">${esc(e.name)}<small>${e.nogym?`<span class="ngtag">No gym</span>`:""}${esc(muscleNames(musclesOf(e.id)).join(", ")||GROUPS[e.group])}${s?`, done ${s.count}×`:""}</small></span><span class="m"><b class="${s?"":"dim"}">${esc(w)}</b></span></button>`}).join("")}<p class="lead" id="ex-none"${list.some(e=>exMatches(e,q))?" hidden":""}>No exercises match. Try another word or pick All.</p>
     <div class="list-foot"><button class="link" data-act="newex">Add a new exercise</button></div></section>`;
 }
 function viewHistory(){
   const p = progress(), w = weekCounts(12), stk = streak();
-  const grid = w.map(c=>`<div class="wk">${[0,1,2].map(k=>`<i class="${k<c?"on":""}"></i>`).join("")}</div>`).join("");
-  const ss = allSessions().slice().reverse();
+  const grid = w.map(c=>`<div class="wk">${Array.from({length:weekGoal()},(_,k)=>`<i class="${k<c?"on":""}"></i>`).join("")}</div>`).join("");
+  const all = allSessions().slice().reverse(), ss = all.slice(0, histShown);
   return `<header class="pad"><div class="eyebrow">Since you started</div><h1>History</h1></header>
     <div class="stats"><div><b>${p.total}</b><span>workouts</span></div><div class="n"><b>${stk}</b><span>week streak</span></div><div><b>${p.month}</b><span>this month</span></div></div>
     <div class="weeks" role="img" aria-label="Workouts per week over the last 12 weeks">${grid}</div>
@@ -1035,12 +1042,17 @@ function viewHistory(){
     <div class="list"><button class="row" data-act="prs"><span class="nm">Personal records<small>${Object.keys(computePRs()).length} exercises with a best</small></span><span class="m"><span class="prbadge sm">PR</span></span></button></div>
     <section class="list"><div class="sec"><span>Workouts</span><span>tap for the summary</span></div>${ss.map(s=>{ const sm = summaryOf(s);
       return `<button class="row hrow" data-act="summary" data-id="${esc(s.id)}"><span class="nm">${esc(sessionTitle(s))}${sm.prs.length?` <span class="prbadge sm">${sm.prs.length} PR${sm.prs.length>1?"s":""}</span>`:""}<small>${esc(s.date?fmtDate(s.date):"Before the app")}${s.nogym?" · No gym":""}</small></span>
-        <span class="m htime"><b class="${sm.durMin==null?"dim":""}">${esc(fmtDur(sm.durMin))}</b><span>${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></span></button>`; }).join("")}</section>
+        <span class="m htime"><b class="${sm.durMin==null?"dim":""}">${esc(fmtDur(sm.durMin))}</b><span>${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></span></button>`; }).join("")}${all.length>ss.length?`<div class="list-foot"><button class="link" data-act="histmore">Show ${Math.min(20,all.length-ss.length)} more (${all.length-ss.length} older)</button></div>`:""}</section>
     <section class="settings"><h2>Settings</h2>
       <div class="srow"><span>Exercises per workout</span><div class="stepper"><button data-act="cnt" data-d="-1" aria-label="Fewer">−</button><output>${S.settings.count}</output><button data-act="cnt" data-d="1" aria-label="More">+</button></div></div>
+      <div class="srow"><span>Weekly goal</span><div class="stepper"><button data-act="goal" data-k="weekGoal" data-d="-1" aria-label="Lower weekly goal">−</button><output>${weekGoal()}</output><button data-act="goal" data-k="weekGoal" data-d="1" aria-label="Raise weekly goal">+</button></div></div>
+      <div class="srow"><span>Monthly goal</span><div class="stepper"><button data-act="goal" data-k="monthGoal" data-d="-1" aria-label="Lower monthly goal">−</button><output>${monthGoal()}</output><button data-act="goal" data-k="monthGoal" data-d="1" aria-label="Raise monthly goal">+</button></div></div>
+      <div class="srow col"><span>Rest between sets</span><div class="chips wrap">${[["auto","Auto"],["60","60 s"],["90","90 s"],["120","2 min"],["180","3 min"]].map(([v,l])=>`<button class="chip${String(S.settings.rest||"auto")===v?" on":""}" data-act="restset" data-v="${v}">${l}</button>`).join("")}</div>
+        <p class="fine">Auto: 2 min for heavy barbell and leg press lifts, 90 s for other compound lifts, 60 s for isolation, bodyweight and timed exercises.</p></div>
       <h2 class="sub">Backup</h2>
       <div class="srow"><button class="cta ghost half" data-act="export">Export all data</button><button class="cta ghost half" data-act="import">Import backup</button></div>
-      <p class="fine">Your data is saved on this phone only. Export saves workouts, history, profile and weigh-ins in one file. Import shows what it will change and asks first. It only adds workouts and weigh-ins, it never deletes them.</p></section>`;
+      <p class="fine">Your data is saved on this phone only. Export saves workouts, history, profile and weigh-ins in one file. Import shows what it will change and asks first. It only adds workouts and weigh-ins, it never deletes them.</p>
+      <p class="fine bkstat">${S.settings.lastExport ? `Last backup: ${esc(fmtDate(new Date(S.settings.lastExport).toISOString()))}.` : "No backup exported yet."} ${storageState==="protected" ? `<span class="good">Storage is protected from automatic clearing.</span>` : storageState==="not protected" ? "This browser may clear the data if the app isn't opened for a while. Add it to your Home Screen and export a backup now and then." : ""}</p></section>`;
 }
 function viewBody(){
   const P = S.profile||{}, b = bodyStats();
@@ -1203,7 +1215,7 @@ document.querySelector(".nav").addEventListener("click", e=>{
 $app.addEventListener("input", e=>{
   const t = e.target, f = t.dataset.f;
   if((f==="w"||f==="r") && S.plan){ S.plan.items[+t.dataset.i].sets[+t.dataset.j][f] = t.value.replace(",","."); persistPlan(); }
-  else if(f==="q"){ query=t.value; const pos=t.selectionStart; render(); const n=$app.querySelector('[data-f="q"]'); n.focus(); n.setSelectionRange(pos,pos); }
+  else if(f==="q"){ query=t.value; applyExFilter(); }
   else if(f==="pq"){ sheet.q=t.value; const pos=t.selectionStart; render(); const n=$app.querySelector('[data-f="pq"]'); n.focus(); n.setSelectionRange(pos,pos); }
 });
 $app.addEventListener("focusin", e=>{ if(e.target.classList?.contains("big")) e.target.select(); });
@@ -1247,6 +1259,7 @@ $app.addEventListener("click", e=>{
     case "rest30": if(rest && !rest.over){ rest.end+=30000; rest.total+=30000; tickRest(); } break;
     case "restgo": rest=null; render(); break;   // kept for any old screen still showing it
     case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(hold) render(); else if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=dockHTML(); break;
+    case "addkg": S.plan.items[i].addKg = true; persistPlan(); render(); break;
     case "plateauoff": S.plan.items[i].plateauOff = true; persistPlan(); render(); break;
     case "usehint": {
       const it=S.plan.items[focus.i], w=b.dataset.w, r=b.dataset.r;
@@ -1266,8 +1279,11 @@ $app.addEventListener("click", e=>{
     case "discard": if(confirm("Discard today's workout?")){ S.plan=null; nogymNext=false; rest=null; hold=null; releaseWake(); persistPlan(); render(false); } break;
     case "finish": finish(); break;
     case "fg": filterGroup=b.dataset.g; render(); break;
+    case "goal": { const k=b.dataset.k, cur = k==="weekGoal" ? weekGoal() : monthGoal(), mx = k==="weekGoal" ? 7 : 31;
+      S.settings[k] = Math.max(1, Math.min(mx, cur + +b.dataset.d)); persistSettings(); render(); break; }
+    case "restset": S.settings.rest = b.dataset.v; persistSettings(); render(); break;
     case "cnt": S.settings.count=Math.max(3,Math.min(10,S.settings.count+ +b.dataset.d)); persistSettings(); render(); break;
-    case "delsess": if(confirm("Delete this workout from your history?")){ const id=b.dataset.id; S.sessions=S.sessions.filter(s=>s.id!==id); saveLocal(); if(db) ref("s-"+id).delete().catch(()=>{}); sheet=null; render(); toast("Workout deleted"); } break;
+    case "delsess": if(confirm("Delete this workout from your history?")){ const id=b.dataset.id; S.sessions=S.sessions.filter(s=>s.id!==id); histVer++; saveLocal(); sheet=null; render(); toast("Workout deleted"); } break;
     case "newex": sheet={type:"newex",g:"legs"}; render(); setTimeout(()=>document.getElementById("nx-name")?.focus(),50); break;
     case "nxg": { const nm=document.getElementById("nx-name").value; sheet.g=b.dataset.g; render(); document.getElementById("nx-name").value=nm; break; }
     case "nxsave": { const nm=document.getElementById("nx-name").value.trim(); if(!nm) return toast("Type a name first");
@@ -1276,8 +1292,10 @@ $app.addEventListener("click", e=>{
     case "import": document.getElementById("restore").click(); break;
     case "prs": sheet={type:"prs"}; render(); break;
     case "summary": sheet={type:"summary", id:b.dataset.id}; render(); break;
+    case "histmore": histShown += 20; render(); break;
     case "weighin": sheet={type:"weighin"}; render(); setTimeout(()=>document.getElementById("wi-w")?.focus(),60); break;
     case "editwi": sheet={type:"weighin", id:b.dataset.id}; render(); break;
+    case "bksnooze": S.settings.bkSnooze = Date.now()+3*864e5; persistSettings(); render(); break;
     case "wisnooze": S.settings.wiSnooze=ymd(new Date()); persistSettings(); render(); break;
     case "winotify": toggleNotify(); break;
     case "wisave": {
@@ -1318,6 +1336,7 @@ function finish(fromDone=false){
   if(S.plan.nogym) s.nogym = true;
   const started = S.plan.started || null, ended = Date.now();
   S.sessions.push(s);
+  if(storageState!=="protected") protectStorage();
   s.summary = Object.assign(buildSummary(s, true), {started, ended, durMin: started ? Math.max(1, Math.round((ended-started)/60000)) : null});
   sheet = {type:"summary", id:s.id};
   S.plan=null; nogymNext=false; focus=null; rest=null; hold=null; releaseWake(); tab="today"; persistPlan(); persistSession(s);
@@ -1331,12 +1350,13 @@ async function exportBackup(){
   const name = "training-backup-"+new Date().toISOString().slice(0,10)+".json";
   try{
     const file = new File([data], name, {type:"application/json"});
-    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:"Training backup"}); return; }
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:"Training backup"}); markExported(); return; }
   }catch(err){ if(err && err.name==="AbortError") return; }
   const url = URL.createObjectURL(new Blob([data],{type:"application/json"}));
   const a = document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 2000); toast("Backup saved");
+  setTimeout(()=>URL.revokeObjectURL(url), 2000); markExported(); toast("Backup saved");
 }
+function markExported(){ S.settings.lastExport = Date.now(); S.settings.lastExportCount = S.sessions.length; delete S.settings.bkSnooze; persistSettings(); render(); }
 document.getElementById("restore").addEventListener("change", async e=>{
   const f = e.target.files[0]; e.target.value=""; if(!f) return;
   let v;
@@ -1359,6 +1379,7 @@ function restorePlan(v){
 function applyRestore(v){
   const r = restorePlan(v);
   r.newSess.forEach(s=>{ migrate(s); S.sessions.push(s); persistSession(s); });
+  if(r.newSess.length || r.sheetNew) histVer++;
   r.newWi.forEach(w=>S.weighins.push({id:w.id, date:w.date, w:+w.w, waist:+w.waist||null, chest:+w.chest||null, arm:+w.arm||null}));
   r.custom.forEach(c=>S.custom.push(c));
   if(r.profDiffers) S.profile = Object.assign({}, r.prof);
@@ -1404,9 +1425,18 @@ function ding(){
 }
 async function holdWake(){ try{ if("wakeLock" in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener?.("release",()=>{ wakeLock=null; }); } }catch(_){ wakeLock=null; } }
 function releaseWake(){ try{ wakeLock?.release(); }catch(_){} wakeLock=null; }
-function startRest(){
+// Auto rest: heavy barbell/sled lifts 2 min, other compound lifts 90 s, isolation, bodyweight and holds 60 s.
+function restFor(exId){
+  const v = S.settings.rest;
+  if(v && v!=="auto") return (+v||60)*1000;
+  if(isTimed(exId)) return 60000;
+  const eq = equipOf(exId), n = (exById(exId)?.name||"").toLowerCase();
+  if(!eq || /curl|raise|fly|flyes|extension|kickback|pushdown|crunch/.test(n)) return 60000;
+  return (eq==="bar" || eq==="sled") ? 120000 : 90000;
+}
+function startRest(ms=REST_MS){
   unlockAudio();
-  rest = {end: Date.now()+REST_MS, total: REST_MS, over:false};
+  rest = {end: Date.now()+ms, total: ms, over:false};
   holdWake();
 }
 function restOver(){
@@ -1489,11 +1519,13 @@ function recommendations(sess, hl){
   return recs.slice(0,4);
 }
 // Summaries for workouts from before this feature are rebuilt from their logged sets (never written back).
-let _sumCache = {key:"", map:{}};
+// Summaries depend only on earlier workouts, so adding a new one keeps the cache;
+// deleting or importing bumps histVer and rebuilds them.
+let histVer = 0, _sumCache = {key:"", map:{}};
 function summaryOf(sess){
   const saved = sess.summary;
   if(saved && Array.isArray(saved.prs) && Array.isArray(saved.ups) && Array.isArray(saved.muscles)) return saved;
-  const key = S.sessions.length+":"+(S.sessions[S.sessions.length-1]?.id||"");
+  const key = histVer+":"+(S.sheet?.done?.length||0);
   if(_sumCache.key!==key) _sumCache = {key, map:{}};
   // rebuilt from the logged sets; keeps a saved time or recommendations if a partial summary exists
   return _sumCache.map[sess.id] || (_sumCache.map[sess.id] = Object.assign(buildSummary(sess, false), saved ? {durMin: saved.durMin ?? null, recs: saved.recs} : {}));
@@ -1569,8 +1601,7 @@ function undoLast(){
   const u = undoState; if(!u) return;
   undoState = null; clearTimeout(undoTimer); document.querySelector(".utoast")?.remove();
   if(u.session){                                   // the workout was just saved: take it back out
-    S.sessions = S.sessions.filter(x=>x.id!==u.session);
-    if(db) ref("s-"+u.session).delete().catch(()=>{});
+    S.sessions = S.sessions.filter(x=>x.id!==u.session); histVer++;
     sheet = null; tab = u.tab;
   }
   S.plan = u.plan; focus = u.focus; selSet = u.selSet; rest = null; justDone = null; releaseWake();
@@ -1588,7 +1619,7 @@ function completeAt(i,j,carry=true){
     focus.edit = false;      // all sets done → the Up next card replaces the inputs
   }
   persistPlan();
-  if(!S.plan.items.every(x=>itemState(x).all)) startRest();
+  if(!S.plan.items.every(x=>itemState(x).all)) startRest(restFor(it.ex));
 }
 const heldMs = () => !hold ? 0 : hold.elapsed + (hold.paused ? 0 : Date.now()-hold.runStart);
 function holdHTML(){ return ""; }        // the hold runs in the full-screen pop-up now
@@ -1648,6 +1679,7 @@ setInterval(tickRest, 250);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ tickRest(); if(rest && !rest.over) holdWake(); } });
 
 /* ---------- start ---------- */
+protectStorage();
 // iOS Safari ignores user-scalable=no, so block its pinch-zoom gesture events too.
 ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t, e=>e.preventDefault(), {passive:false}));
 loadLocal();

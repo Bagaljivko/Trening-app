@@ -961,11 +961,9 @@ async function checkForUpdate(){
   if(navigator.onLine === false) return "offline";
   const reg = await navigator.serviceWorker.getRegistration(); if(!reg) return "unsupported";
   try{ await reg.update(); }catch(_){ return "offline"; }
-  const w = reg.installing || reg.waiting;
-  if(w){                                    // a new version is downloading: wait for it, then reload into it
-    await new Promise(res=>{ const done=()=>{ if(w.state==="activated" || w.state==="redundant") res(); }; w.addEventListener("statechange", done); done(); setTimeout(res, 60000); });
-    if(w.state==="activated"){ selfUpdating = true; location.reload(); return "updating"; }
-  }
+  const w = reg.installing;
+  if(w) await new Promise(res=>{ const done=()=>{ if(w.state!=="installing") res(); }; w.addEventListener("statechange", done); done(); setTimeout(res, 60000); });
+  if(reg.waiting){ waitingWorker = reg.waiting; applyUpdate(); return "updating"; }   // a new version is downloaded: switch to it
   // Same service worker: still make sure the app page itself is the newest one.
   try{
     const fresh = await fetch("index.html", {cache:"no-store"}); if(!fresh.ok) return "offline";
@@ -991,11 +989,25 @@ async function shareAppSheet(){
   sheet = {type:"shareapp"}; render();
 }
 // A new version that installed in the background while the app was open: offer a one-tap reload.
+// A downloaded version waits here until you tap Reload; the bar is hidden while you're on the exercise screen.
+let waitingWorker = null;
+function offerUpdate(w){ waitingWorker = w; syncUpdateBar(); }
+function applyUpdate(){
+  const w = waitingWorker; selfUpdating = true;
+  if(!w) return location.reload();
+  w.postMessage("SKIP_WAITING");
+  setTimeout(()=>location.reload(), 4000);   // in case the switch-over event doesn't arrive
+}
+function syncUpdateBar(){
+  const bar = document.getElementById("updateBar");
+  if(focus || !waitingWorker){ if(bar) bar.remove(); return; }
+  if(!bar) showUpdateBar();
+}
 function showUpdateBar(){
   if(document.getElementById("updateBar")) return;
   const bar = document.createElement("div"); bar.id = "updateBar"; bar.className = "update-bar"; bar.setAttribute("role","status");
   bar.innerHTML = `<span>A new version is ready.</span><button class="pill" type="button">Reload</button>`;
-  bar.querySelector("button").addEventListener("click", ()=>{ if(rest || hold) return toast("Finish this set first"); location.reload(); });
+  bar.querySelector("button").addEventListener("click", ()=>{ if(hold) return toast("Finish this hold first"); applyUpdate(); });   // logged sets are already saved
   document.body.appendChild(bar);
 }
 
@@ -1396,6 +1408,7 @@ function render(keepScroll=true){
   document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===tab?"page":"false"));
   if(keepScroll) window.scrollTo(0,y);
   hydrateIll();
+  if(typeof syncUpdateBar==="function") syncUpdateBar();
 }
 
 /* ---------- events ---------- */
@@ -1894,9 +1907,11 @@ if(h==="weighin"){ tab="body"; sheet={type:"weighin"}; }
 render();
 window.addEventListener("hashchange", ()=>{ if(location.hash==="#weighin"){ focus=null; tab="body"; sheet={type:"weighin"}; render(false); } });
 if("serviceWorker" in navigator){
-  const hadController = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ readVersion(); if(hadController && !selfUpdating) showUpdateBar(); });
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(selfUpdating) location.reload(); else readVersion(); });
   window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").then(reg=>{
+    if(reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
+    reg.addEventListener("updatefound", ()=>{ const w = reg.installing;
+      if(w) w.addEventListener("statechange", ()=>{ if(w.state==="installed" && navigator.serviceWorker.controller) offerUpdate(w); }); });
     readVersion().then(()=>{ if(tab==="history" && !focus) render(); });
     // An installed app is often just brought back from the background: look for a new version then.
     document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) reg.update().catch(()=>{}); });

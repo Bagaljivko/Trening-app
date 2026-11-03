@@ -1705,6 +1705,7 @@ function render(keepScroll=true){
   if(typeof syncUpdateBar==="function") syncUpdateBar();
   document.documentElement.classList.toggle("locked", !!sheet || !!(focus && hold));
   syncBack();
+  syncWake();
 }
 
 /* ---------- native back button / back gesture (Android) ----------
@@ -2027,8 +2028,21 @@ function ding(){
     });
   }catch(_){}
 }
-async function holdWake(){ try{ if("wakeLock" in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener?.("release",()=>{ wakeLock=null; }); } }catch(_){ wakeLock=null; } }
-function releaseWake(){ try{ wakeLock?.release(); }catch(_){} wakeLock=null; }
+let wakePending = false;
+async function holdWake(){
+  if(wakeLock || wakePending || !("wakeLock" in navigator) || document.hidden) return;
+  wakePending = true;
+  try{ wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener?.("release",()=>{ wakeLock=null; }); }
+  catch(_){ wakeLock = null; }
+  wakePending = false;
+  if(wakeLock && !wantWake()) releaseWake();   // the workout ended while the request was pending
+}
+// The screen stays awake for the whole workout: from opening an exercise or the first logged set
+// until the workout is finished or discarded (plus any rest timer or timed hold).
+const workoutOn = () => !!(S.plan && S.plan.items && (focus || S.plan.items.some(it=>it.sets.some(s=>s.done))));
+const wantWake = () => workoutOn() || !!(rest && !rest.over) || !!hold;
+function syncWake(){ if(wantWake()) holdWake(); else releaseWake(); }
+function releaseWake(){ if(wantWake()) return; try{ wakeLock?.release(); }catch(_){} wakeLock=null; }
 // Auto rest: heavy barbell/sled lifts 2 min, other compound lifts 90 s, isolation, bodyweight and holds 60 s.
 function restFor(exId){
   const v = S.settings.rest;
@@ -2281,7 +2295,7 @@ function tickRest(){
   if(l) l.style.transform = `scaleX(${(left/rest.total).toFixed(3)})`;
 }
 setInterval(tickRest, 250);
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ tickRest(); if(rest && !rest.over) holdWake(); } });
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ tickRest(); if(wantWake()) holdWake(); } });
 
 /* ---------- start ---------- */
 protectStorage();

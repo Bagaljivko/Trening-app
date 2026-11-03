@@ -162,6 +162,33 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- screen stays awake for the whole workout
+  console.log("screen awake for the whole workout");
+  {
+    const { ctx, page } = await open(browser, URL, busy, { mobile: true });
+    await page.evaluate(() => {
+      window.__wake = { on: 0, requests: 0 };
+      Object.defineProperty(navigator, "wakeLock", { configurable: true, value: { request: async () => {
+        window.__wake.requests++; window.__wake.on++; const l = new EventTarget(); let done = false;
+        l.release = async () => { if (done) return; done = true; window.__wake.on--; l.dispatchEvent(new Event("release")); }; return l; } } });
+      releaseWake(); wakeLock = null; render();
+    });
+    const awake = async () => { await page.waitForTimeout(80); return page.evaluate(() => window.__wake.on); };
+    check("screen may sleep before the workout starts", (await awake()) === 0);
+    await page.click('[data-act="open"][data-i="0"]');
+    check("screen stays awake on the exercise screen", (await awake()) === 1);
+    await page.click('#ctaBox [data-act="done"]'); await page.click('[data-act="restskip"]');
+    check("screen stays awake after rest is skipped", (await awake()) === 1);
+    await page.click('[data-act="back"]');
+    check("screen stays awake on Today while a workout is in progress", (await awake()) === 1);
+    await page.click('[data-tab="history"]'); await page.click('[data-tab="today"]');
+    check("only one wake lock is ever held", (await page.evaluate(() => window.__wake.requests)) === 1, String(await page.evaluate(() => window.__wake.requests)));
+    await page.click('[data-act="discard"]');
+    check("screen may sleep again once the workout ends", (await awake()) === 0);
+    check("wake lock: no page errors", page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- backup
   console.log("backup and restore");
   {

@@ -95,7 +95,14 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     const meta = await page.getAttribute('meta[name="viewport"]', "content");
     check("viewport blocks zoom", /maximum-scale=1/.test(meta) && /user-scalable=no/.test(meta), meta);
     check("pinch gesture events are blocked", await page.evaluate(() => ["gesturestart", "gesturechange", "gestureend"].every(t => { const e = new Event(t, { bubbles: true, cancelable: true }); document.body.dispatchEvent(e); return e.defaultPrevented; })));
-    check("double-tap zoom is off", await page.evaluate(() => getComputedStyle(document.body).touchAction === "manipulation"));
+    check("pinch and double-tap zoom are off (scrolling only)", await page.evaluate(() => getComputedStyle(document.body).touchAction === "pan-x pan-y" && getComputedStyle(document.querySelector(".nav button")).touchAction === "pan-x pan-y"));
+    const tm = await page.evaluate(() => {
+      const mk = n => { const el = document.querySelector("main"); const ts = Array.from({ length: n }, (_, i) => new Touch({ identifier: i, target: el, clientX: 100 + i * 50, clientY: 200 }));
+        const e = new TouchEvent("touchmove", { touches: ts, targetTouches: ts, changedTouches: ts, bubbles: true, cancelable: true }); el.dispatchEvent(e); return e.defaultPrevented; };
+      return { one: mk(1), two: mk(2) };
+    });
+    check("two-finger moves are cancelled, one-finger scrolling is not", tm.two === true && tm.one === false, JSON.stringify(tm));
+    check("long-press on buttons doesn't select text", await page.evaluate(() => getComputedStyle(document.querySelector(".nav button")).userSelect === "none"));
     await page.click('[data-tab="body"]'); await page.click('.dock [data-act="weighin"]');
     const small = await page.evaluate(() => [...document.querySelectorAll("input:not([type=file])")].filter(i => i.offsetParent && parseFloat(getComputedStyle(i).fontSize) < 16).length);
     check("form inputs are 16px or larger", small === 0, small + " smaller");

@@ -12,7 +12,7 @@ const path = require("path");
 const { chromium } = require("playwright");
 
 const ROOT = path.join(__dirname, "..");
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".webmanifest": "application/manifest+json" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".webmanifest": "application/manifest+json", ".woff2": "font/woff2" };
 const WIDTHS = [[320, 568], [375, 667], [430, 932]];
 const day = n => new Date(Date.now() - n * 864e5).toISOString();
 const hrs = n => new Date(Date.now() - n * 3600e3).toISOString();
@@ -50,6 +50,8 @@ async function open(browser, url, seed, opts = {}) {
   if (seed) { await page.evaluate(s => localStorage.setItem("training-log-v1", JSON.stringify(s)), seed); await page.reload(); }
   return { ctx, page };
 }
+// Opens Settings with the gear (or stays there if the app already reopened on it)
+const toSettings = async page => { if (!(await page.$('[data-act="setclose"]'))) await page.click('[data-act="settings"]'); };
 const stored = page => page.evaluate(() => JSON.parse(localStorage.getItem("training-log-v1")));
 const noOverflow = page => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
@@ -189,18 +191,100 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- settings screen, notes, favourites, edit, CSV
+  console.log("settings, notes, favourites, editing, CSV");
+  {
+    const { ctx, page } = await open(browser, URL, busy, { mobile: true });
+    // offline cache never answers for Google; the font comes with the app
+    const sw = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+    check("offline cache only keeps the app's own files (Drive always live)", /origin !== self\.location\.origin\) return/.test(sw));
+    check("font is bundled with the app", !(await page.$('link[href*="fonts.googleapis"]')) && fs.existsSync(path.join(ROOT, "fonts/inter-latin.woff2")) && sw.includes("fonts/inter-latin.woff2")
+      && await page.evaluate(async () => { await document.fonts.ready; return document.fonts.check("16px Inter"); }));
+    // gear opens Settings from every tab; close returns to where you were
+    for (const tb of ["today", "exercises", "history", "body"]) {
+      await page.click(`[data-tab="${tb}"]`); await page.click('[data-act="settings"]');
+      const ok = await page.evaluate(() => tab === "settings" && /Settings/.test(document.querySelector("h1").textContent));
+      await page.click('[data-act="setclose"]');
+      check(`${tb}: gear opens Settings and closing returns`, ok && (await page.evaluate(() => tab)) === tb);
+    }
+    await page.click('[data-tab="history"]');
+    check("History no longer holds the settings", !(await page.$('[data-act="export"]')) && !(await page.$('[data-act="cnt"]')));
+    await page.click('[data-act="settings"]');
+    for (const a of ["cnt", "goal", "restset", "mute", "prefs", "export", "exportcsv", "import", "driveconnect", "profile", "chkupd", "shareapp"])
+      check(`Settings has ${a}`, !!(await page.$(`[data-act="${a}"]`)));
+    await page.goBack(); await page.waitForTimeout(150);
+    check("Back from Settings returns to the tab you came from", (await page.evaluate(() => tab)) === "history");
+    await page.click('[data-act="settings"]');
+    const m0 = await page.evaluate(() => S.settings.mute); await page.click('[data-act="mute"]');
+    check("Sound switch works in Settings", (await stored(page)).settings.mute === !m0);
+
+    // CSV: one row per set, Excel-friendly
+    const csv = await page.evaluate(() => csvData());
+    const lines = csv.replace(/^﻿/, "").trim().split(/\r\n/);
+    const sets = busy.sessions.reduce((n, s) => n + s.items.reduce((m, it) => m + it.sets.length, 0), 0);
+    check("CSV has a header and one row per logged set", lines[0].startsWith("Date,Time,Workout,Exercise") && lines.length === sets + 1, lines.length + " lines");
+    check("CSV starts with a BOM so Excel reads it", csv.charCodeAt(0) === 0xfeff);
+    const [csvDl] = await Promise.all([page.waitForEvent("download"), page.click('[data-act="exportcsv"]')]);
+    check("CSV downloads as a .csv file", /\.csv$/.test(csvDl.suggestedFilename()));
+
+    // favourites and never suggest
+    await page.click('[data-act="setclose"]'); await page.click('[data-tab="exercises"]');
+    await page.click('[data-act="detail"][data-id="0"]'); await page.click('[data-act="pref"][data-v="never"]');
+    check("Never suggest is saved", (await stored(page)).settings.exPref["0"] === "never");
+    const shuffles = () => page.evaluate(() => { const plan = S.plan, ss = S.sessions; S.sessions = []; let n = 0; for (let k = 0; k < 100; k++) { generate(); n += S.plan.items.filter(it => it.ex === 0).length; } S.sessions = ss; S.plan = plan; persistPlan(); return n; });
+    const picks = await shuffles();
+    check("a never-suggested exercise is left out of shuffles", picks === 0, picks + " picks");
+    await page.click('[data-act="pref"][data-v="fav"]');
+    const favPicks = await shuffles();
+    check("a favourite comes up much more often in shuffles", favPicks >= 45, favPicks + " of 100 (about 25 without)");
+    await page.click('.sheet [data-act="close"].iconbtn');
+    check("favourite is marked in the list", /Favourite/.test(await page.textContent('[data-act="detail"][data-id="0"]')));
+
+    // notes
+    await page.click('[data-act="detail"][data-id="0"]'); await page.click('.sheet [data-act="note"]');
+    await page.fill("#note-t", "Bench 3, wide grip"); await page.click('[data-act="notesave"]');
+    check("a note is saved and the exercise sheet comes back", (await stored(page)).settings.notes["0"] === "Bench 3, wide grip" && !!(await page.$('.sheet [data-act="pref"]')));
+    await page.click('.sheet [data-act="close"].iconbtn'); await page.click('[data-tab="today"]');
+    await page.click('[data-act="open"][data-i="0"]');
+    check("the note shows on the exercise screen", /Bench 3, wide grip/.test(await page.textContent("main")));
+    await page.click('[data-act="back"]');
+
+    // edit a past workout: change kg, remove a set; a safety copy is made first
+    await page.click('[data-tab="history"]'); await page.click(".hrow");
+    const sid = await page.evaluate(() => sheet.id);
+    await page.click('[data-act="editsess"]');
+    await page.fill("#es-0-0-w", "65"); await page.fill("#es-0-0-r", "10");
+    await page.click('.esrow[data-i="1"][data-j="0"] [data-act="esdel"]');
+    await page.click('[data-act="essave"]'); await page.waitForTimeout(300);
+    const es = (await stored(page)).sessions.find(s => s.id === sid);
+    check("editing a workout saves the new numbers", es.items[0].sets[0].w === 65 && es.items[0].sets[0].r === 10, JSON.stringify(es.items[0].sets[0]));
+    check("a removed set's exercise goes when it had no sets left", es.items.length === 1 && !!es.edited);
+    check("the edited workout's summary is rebuilt", !!es.summary && Array.isArray(es.summary.prs));
+    check("all other workouts are untouched", (await stored(page)).sessions.filter(s => s.id !== sid).every(s => JSON.stringify(s.items) === JSON.stringify(busy.sessions.find(b => b.id === s.id).items)));
+    const snaps = await page.evaluate(async () => (await snapList()).map(x => x.reason));
+    check("a safety copy is made before editing", snaps.includes("edit"), snaps.join(","));
+    check("after saving, the summary is shown again", (await page.evaluate(() => sheet && sheet.type)) === "summary");
+
+    // restore keeps local notes and favourites and adds the backup's
+    await page.evaluate(async () => { const v = backupData(); v.settings = Object.assign({}, v.settings, { notes: { "7": "from backup", "0": "old" }, exPref: { "22": "never" } }); await applyRestore(v); }); await page.waitForTimeout(200);
+    const st = (await stored(page)).settings;
+    check("restore adds notes and favourites without overwriting yours", st.notes["7"] === "from backup" && st.notes["0"] === "Bench 3, wide grip" && st.exPref["22"] === "never" && st.exPref["0"] === "fav");
+    check("settings features: no page errors", page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- backup
   console.log("backup and restore");
   {
     const { ctx, page } = await open(browser, URL, busy);
-    await page.click('[data-tab="history"]');
+    await toSettings(page);
     const [dl] = await Promise.all([page.waitForEvent("download"), page.click('[data-act="export"]')]);
     const file = path.join(fs.mkdtempSync(path.join(require("os").tmpdir(), "tl-")), "backup.json");
     await dl.saveAs(file);
     const j = JSON.parse(fs.readFileSync(file, "utf8"));
     check("export holds workouts, profile and weigh-ins", j.sessions.length === 6 && j.profile.name === "Test" && j.weighins.length === 1);
     await page.evaluate(() => { const s = JSON.parse(localStorage.getItem("training-log-v1")); s.sessions = s.sessions.slice(0, 2); localStorage.setItem("training-log-v1", JSON.stringify(s)); });
-    await page.reload(); await page.click('[data-tab="history"]');
+    await page.reload(); await toSettings(page);
     await page.setInputFiles("#restore", file);
     await page.waitForSelector('[data-act="dorestore"]');
     check("import asks before changing anything", (await stored(page)).sessions.length === 2);
@@ -300,7 +384,7 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
   console.log("update and share");
   for (const [w, h] of WIDTHS) {
     const { ctx, page } = await open(browser, URL, baseSeed({}), { w, h });
-    await page.click('[data-tab="history"]');
+    await toSettings(page);
     check(`${w}px: Check for updates and Share app buttons`, !!(await page.$('[data-act="chkupd"]')) && !!(await page.$('[data-act="shareapp"]')));
     await page.click('[data-act="shareapp"]');
     await page.waitForSelector(".qr-box svg");
@@ -372,7 +456,7 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.route("https://www.googleapis.com/**", handler); await ctx.addInitScript(gis);
     const page = await ctx.newPage(); page.on("dialog", d => d.accept());
     await page.goto(URL); await page.evaluate(s => localStorage.setItem("training-log-v1", JSON.stringify(s)), seed); await page.reload();
-    await page.click('[data-tab="history"]'); await page.click('[data-act="driveconnect"]'); await page.waitForTimeout(800);
+    await toSettings(page); await page.click('[data-act="driveconnect"]'); await page.waitForTimeout(800);
     check("connecting Drive makes a first backup", backup() && backup().sessions.length === 1 && Object.values(files).some(f => f.folder && f.name === "Training log"));
     const ups = () => Object.values(files).find(x => x.name === "training-log-backup.json").modifiedTime;
     const u0 = ups();
@@ -384,7 +468,7 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     const ctx2 = await browser.newContext({ viewport: { width: 375, height: 667 }, serviceWorkers: "block" });
     await ctx2.route("https://www.googleapis.com/**", handler); await ctx2.addInitScript(gis);
     const p2 = await ctx2.newPage(); p2.on("dialog", d => d.accept());
-    await p2.goto(URL); await p2.click('[data-tab="history"]'); await p2.click('[data-act="driveconnect"]');
+    await p2.goto(URL); await toSettings(p2); await p2.click('[data-act="driveconnect"]');
     await p2.waitForSelector('[data-act="dorestore"]', { timeout: 5000 }); await p2.click('[data-act="dorestore"]'); await p2.waitForTimeout(400);
     check("a new phone gets its history back from Drive", (await p2.evaluate(() => S.sessions.length)) === 2);
     await ctx2.close();

@@ -1,6 +1,6 @@
 // Offline support: keep the app shell and all exercise pictures cached, refresh them in the background.
-const CACHE = "training-v15";
-const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "qr.js",
+const CACHE = "training-v16";
+const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "qr.js", "fonts/inter-latin.woff2", "fonts/inter-latin-ext.woff2",
   "images/archer-push-up.svg",
   "images/arnold-press-standing.svg",
   "images/back-extension.svg",
@@ -157,6 +157,9 @@ self.addEventListener("activate", e => {
 });
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
+  // Only the app's own files are kept offline. Anything else (Google Drive, Google sign-in) always
+  // goes to the network, so a Drive restore can never get an old copy of the backup.
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   if (e.request.cache === "no-store") return;   // "Check for updates" asks the network directly
   e.respondWith(caches.open(CACHE).then(async cache => {
     const cached = await cache.match(e.request);

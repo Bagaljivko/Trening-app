@@ -54,10 +54,13 @@
 <link rel="apple-touch-startup-image" href="icons/splash/dark-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
 <link rel="apple-touch-startup-image" href="icons/splash/dark-1260x2736.png" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
 <link rel="apple-touch-startup-image" href="icons/splash/dark-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+/* Inter is bundled with the app (fonts/, SIL Open Font License): works offline from the first launch */
+@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/inter-latin.woff2) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/inter-latin-ext.woff2) format("woff2");
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 :root{
   --bg:#F5F5F7; --s1:#FFFFFF; --s2:#E8E8ED; --line:#DCDCE1; --ink:#0B0B0D; --mut:#6E6E73; --dim:#B4B4BA;
   --pic:#121215; --neon:#1FD873; --neon-ink:#00140A; --neon-txt:#0E9F50; --neon-d:#CFEFDC; --red:#E5372B; --glow:none;
@@ -388,6 +391,34 @@ body.holding{overflow:hidden}
 .sess li span:last-child{color:var(--mut);white-space:nowrap;font-variant-numeric:tabular-nums}
 .sess .link{display:block;margin:0 0 14px}
 .settings{margin:36px 24px 0;padding-top:20px;border-top:1px solid var(--line)}
+.settings.first{margin-top:20px;padding-top:0;border-top:0}
+.settings .toggle{margin-top:18px}
+.settings .setrow{margin-top:10px;border-top:1px solid var(--line)}
+.settings .setrow .m{color:var(--mut);font-size:15px}
+.half-note{flex:1;margin:0}
+.note{display:block;width:100%;text-align:left;margin:14px 0 0;padding:11px 14px;border-radius:14px;background:var(--s1);border:1px solid var(--line);font-size:14.5px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+.note.empty{color:var(--mut);background:transparent;border-style:dashed}
+.note-l{display:block;font-size:12px;font-weight:600;color:var(--mut);margin-bottom:2px}
+.notebox{display:block;width:100%;margin-top:14px;border-radius:16px;border:1px solid var(--line);background:var(--s1);color:var(--ink);padding:12px 14px;font:inherit;font-size:16px;resize:vertical}
+.notebox:focus{outline:2px solid var(--neon);outline-offset:1px}
+.prefbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.ptag{color:var(--mut)}
+.ptag.fav{color:var(--neon-txt);font-weight:600}
+.esx{margin-top:18px}
+.esx-h{display:flex;justify-content:space-between;gap:10px;font-weight:600;font-size:15px;margin-bottom:6px}
+.esx-h span{font-weight:400;font-size:13px;color:var(--mut);flex:none}
+.esrow{display:grid;grid-template-columns:18px minmax(0,1fr) 14px minmax(0,1fr) 40px;gap:6px;align-items:center;margin-top:6px}
+.esn{font-size:13px;color:var(--mut);text-align:center}
+.esx-u{text-align:center;color:var(--mut)}
+.esin{width:100%;min-width:0;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--s1);color:var(--ink);padding:0 12px;font:inherit;font-size:16px}
+.esin:focus{outline:2px solid var(--neon);outline-offset:1px}
+.esrow.gone .esin,.esrow.gone .esn{opacity:.35;text-decoration:line-through}
+.esrow.gone .esdel{color:var(--neon-txt)}
+/* gear (opens Settings) and close button sit at the top right of each screen's title */
+.hdr{position:relative}
+.hdr h1{padding-right:44px}
+.gear{position:absolute;right:12px;top:20px}
+.gear svg{width:23px;height:23px;stroke:currentColor}
 .srow{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:16px;font-size:15px}
 .srow.col{flex-direction:column;align-items:stretch;gap:0}
 .srow.col .chips.wrap{margin-top:10px}
@@ -503,7 +534,7 @@ const $app = document.getElementById("app");
 let S = {sessions:[], plan:null, settings:{count:7}, custom:[], updated:0, profile:{}, weighins:[]};
 let openHow = new Set(); let focus = null; let selSet = null; let howOpen = false;
 let rest = null, hold = null, actx = null, wakeLock = null;
-let tab = "today", filterGroup = "all", query = "", sheet = null;
+let prevTab = "today", tab = "today", filterGroup = "all", query = "", sheet = null;
 let nogymNext = false;
 let histShown = 20;      // History shows the newest 20 workouts, then "Show more"   // "No gym" picked before building; never saved, so the next workout starts as gym
 
@@ -533,7 +564,7 @@ async function snapList(){
   return all;
 }
 const SNAP_LABELS = {daily:"Daily copy", upgrade:"Before an app update changed the data format", restore:"Before restoring a backup",
-  usesnap:"Before restoring a safety copy", unreadable:"The data that couldn't be read"};
+  usesnap:"Before restoring a safety copy", edit:"Before editing a past workout", unreadable:"The data that couldn't be read"};
 // Keeps the 3 newest daily copies and the 3 newest other copies.
 async function takeSnapshot(reason, raw){
   try{
@@ -821,7 +852,8 @@ function generate(){
   }));
   const lastEx = new Set((sessions[n-1]?.items||[]).map(it=>it.ex));
   const count = S.settings.count || 7;
-  const recent = recentMuscles(), pool = gymExercises();
+  // "Never suggest" exercises are left out; favourites come up more often (you can still add anything by hand)
+  const prefs = exPrefs(), recent = recentMuscles(), pool = gymExercises().filter(e=>prefs[e.id]!=="never");
   // an exercise is "fresh" when its main muscle wasn't trained in the last 48 h
   const fresh = e => { const m = musclesOf(e.id)[0]; return !m || !recent.has(m); };
   const freshGroups = ORDER.filter(g=>pool.some(e=>e.group===g && fresh(e)));
@@ -844,7 +876,7 @@ function generate(){
     const pick = cands.map(e=>{
       const gap = Math.min(n-(lastIdx[e.id]??n-30), 30);
       const overlap = musclesOf(e.id).slice(1).filter(m=>recent.has(m)).length;
-      return {e, s: gap*(0.5+Math.random()) + Math.log(1+(freq[e.id]||0)+(e.freq||0))*4 - overlap*6};
+      return {e, s: gap*(0.5+Math.random()) + Math.log(1+(freq[e.id]||0)+(e.freq||0))*4 - overlap*6 + (prefs[e.id]==="fav"?12:0)};
     }).sort((a,b)=>b.s-a.s)[0].e;
     chosen.add(pick.id); items.push(buildItem(pick.id));
   }
@@ -874,6 +906,8 @@ function noGymFor(exId, used){
     .concat(NOGYM.filter(x=>x.group===e.group).map(x=>x.id))
     .concat(NOGYM.filter(x=>ms.some(k=>x.m.includes(k))).map(x=>x.id))
     .filter(id=>NGMAP[id]);
+  const prefs = exPrefs(), allowed = ids.filter(id=>prefs[id]!=="never");
+  if(allowed.length) ids.splice(0, ids.length, ...allowed);           // skip "never suggest" ones unless nothing else fits
   // Same main muscle always wins: an unused one first, then reuse one rather than drift to another muscle.
   const same = ids.filter(id=>NGMAP[id].m[0]===m);
   return same.find(id=>!used.has(id)) || same[0] || ids.find(id=>!used.has(id)) || ids[0] || null;
@@ -942,6 +976,7 @@ function toast(msg){
   document.body.appendChild(t); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.remove(),2600);
 }
 const ICON = {
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   swap:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>',
   x:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
@@ -951,10 +986,15 @@ const ICON = {
 
 /* ---------- metrics ---------- */
 function weekStart(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }
+// Workouts per week, oldest first. One pass over the history, cached until a workout is added or changed.
+let _wkCache = {key:"", map:null};
 function weekCounts(n){
-  const now = weekStart(new Date()), out=[];
-  for(let k=n-1;k>=0;k--){ const a=new Date(now); a.setDate(a.getDate()-7*k); const b=new Date(a); b.setDate(b.getDate()+7);
-    out.push(S.sessions.filter(s=>{const d=new Date(s.date); return d>=a && d<b;}).length); }
+  const now = weekStart(new Date()), key = histVer+":"+S.sessions.length+":"+now.getTime();
+  if(_wkCache.key!==key){ const map = new Map();
+    for(const s of S.sessions){ if(!s.date) continue; const w = weekStart(new Date(s.date)).getTime(); map.set(w, (map.get(w)||0)+1); }
+    _wkCache = {key, map}; }
+  const out=[];
+  for(let k=n-1;k>=0;k--){ const a=new Date(now); a.setDate(a.getDate()-7*k); out.push(_wkCache.map.get(weekStart(a).getTime())||0); }
   return out;
 }
 function streak(){
@@ -1311,7 +1351,7 @@ async function protectStorage(){
     if(!navigator.storage || !navigator.storage.persist) return;
     storageState = (await navigator.storage.persisted()) || (await navigator.storage.persist()) ? "protected" : "not protected";
   }catch(_){}
-  if(tab==="history" && !focus) render();
+  if(tab==="settings" && !focus) render();
 }
 function dataBanner(){
   if(loadProblem) return `<div class="banner bad" role="alert"><p>Your saved data couldn't be read<small>Nothing has been changed or overwritten. New changes aren't saved until you choose what to do.</small></p>
@@ -1381,7 +1421,7 @@ function heroBlock(){
 function itemState(it){ const d=it.sets.filter(s=>s.done).length; return {d, n:it.sets.length, all:d===it.sets.length}; }
 function viewToday(){
   const num = S.sessions.length + 1;
-  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>` + (dataBanner() || driveBanner() || backupBanner() || weighBanner());
+  const head = `<header class="pad hdr"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1>${gearBtn()}</header>` + (dataBanner() || driveBanner() || backupBanner() || weighBanner());
   if(!S.plan || !S.plan.items.length){
     const last = allSessions().slice(-1)[0];
     const rec = muscleNames(recentMuscles());
@@ -1426,6 +1466,7 @@ function viewFocus(){
       <h2 class="fname">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge">New PR</span>`:""}</h2>
       ${picHTML(e)}
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(e.desc)}</p><button class="link more" data-act="howtoggle">${howOpen?"Show less":"Show more"}</button>`:""}
+      ${noteHTML(it.ex)}
       ${upNext}
       ${!exDone && hint?`<div class="hint${hint.plateau?" plateau":""}">${hint.plateau?`<button class="iconbtn hx" data-act="plateauoff" data-i="${i}" aria-label="Dismiss for this workout">${ICON.x}</button><span class="up">${esc(hint.text)}</span>`:`<span class="up">Last time ${esc(hint.last)}</span>, ${esc(hint.text)}`}<div class="hopts">${hint.opts.map(o=>`<button class="chip" data-act="usehint" data-w="${o.w??""}" data-r="${o.r??""}">${esc(o.label)}</button>`).join("")}</div></div>`:""}
       ${exDone ? "" : numCards(it, i, j, s)}
@@ -1503,45 +1544,60 @@ function viewExercises(){
   const st = exStats(); const q = query.trim().toLowerCase();
   const list = allExercises().filter(e=>(filterGroup==="all"||(filterGroup==="nogym"?e.nogym:e.group===filterGroup)))
     .sort((a,b)=>(st[b.id]?.count||0)-(st[a.id]?.count||0) || (b.freq||0)-(a.freq||0));
-  return `<header class="pad"><div class="eyebrow">${allExercises().length} exercises</div><h1>Exercises</h1></header>
+  return `<header class="pad hdr"><div class="eyebrow">${allExercises().length} exercises</div><h1>Exercises</h1>${gearBtn()}</header>
     <div class="pad2"><input class="search" type="search" placeholder="Search" value="${esc(query)}" data-f="q" aria-label="Search exercises">
     <div class="chips">${["all",...ORDER,"nogym"].map(g=>`<button class="chip${filterGroup===g?" on":""}" data-act="fg" data-g="${g}">${g==="all"?"All":g==="nogym"?"No gym":GROUPS[g]}</button>`).join("")}</div></div>
     <section class="list">${list.map(e=>{const s=st[e.id]; const w = s ? fmtV(e.id,maxW(s.last)) : (e.startW? fmtV(e.id,e.startW):"");
-      return `<button class="row exrow" data-act="detail" data-id="${e.id}" data-name="${esc(e.name.toLowerCase())}"${exMatches(e,q)?"":" hidden"}>${illHTML(e, "thumb lazy")}<span class="nm">${esc(e.name)}<small>${e.nogym?`<span class="ngtag">No gym</span>`:""}${esc(muscleNames(musclesOf(e.id)).join(", ")||GROUPS[e.group])}${s?`, done ${s.count}×`:""}</small></span><span class="m"><b class="${s?"":"dim"}">${esc(w)}</b></span></button>`}).join("")}<p class="lead" id="ex-none"${list.some(e=>exMatches(e,q))?" hidden":""}>No exercises match. Try another word or pick All.</p>
+      return `<button class="row exrow" data-act="detail" data-id="${e.id}" data-name="${esc(e.name.toLowerCase())}"${exMatches(e,q)?"":" hidden"}>${illHTML(e, "thumb lazy")}<span class="nm">${esc(e.name)}<small>${exPrefs()[e.id]==="fav"?`<span class="ptag fav">Favourite</span> · `:exPrefs()[e.id]==="never"?`<span class="ptag">Never suggested</span> · `:""}${e.nogym?`<span class="ngtag">No gym</span>`:""}${esc(muscleNames(musclesOf(e.id)).join(", ")||GROUPS[e.group])}${s?`, done ${s.count}×`:""}</small></span><span class="m"><b class="${s?"":"dim"}">${esc(w)}</b></span></button>`}).join("")}<p class="lead" id="ex-none"${list.some(e=>exMatches(e,q))?" hidden":""}>No exercises match. Try another word or pick All.</p>
     <div class="list-foot"><button class="link" data-act="newex">Add a new exercise</button></div></section>`;
 }
 function viewHistory(){
   const p = progress(), w = weekCounts(12), stk = streak();
   const grid = w.map(c=>`<div class="wk">${Array.from({length:weekGoal()},(_,k)=>`<i class="${k<c?"on":""}"></i>`).join("")}</div>`).join("");
   const all = allSessions().slice().reverse(), ss = all.slice(0, histShown);
-  return `<header class="pad"><div class="eyebrow">Since you started</div><h1>History</h1></header>
+  return `<header class="pad hdr"><div class="eyebrow">Since you started</div><h1>History</h1>${gearBtn()}</header>
     <div class="stats"><div><b>${p.total}</b><span>workouts</span></div><div class="n"><b>${stk}</b><span>week streak</span></div><div><b>${p.month}</b><span>this month</span></div></div>
     <div class="weeks" role="img" aria-label="Workouts per week over the last 12 weeks">${grid}</div>
     <div class="wl"><span>12 weeks ago</span><span>This week</span></div>
     <div class="list"><button class="row" data-act="prs"><span class="nm">Personal records<small>${Object.keys(computePRs()).length} exercises with a best</small></span><span class="m"><span class="prbadge sm">PR</span></span></button></div>
     <section class="list"><div class="sec"><span>Workouts</span><span>tap for the summary</span></div>${ss.map(s=>{ const sm = summaryOf(s);
       return `<button class="row hrow" data-act="summary" data-id="${esc(s.id)}"><span class="nm">${esc(sessionTitle(s))}${sm.prs.length?` <span class="prbadge sm">${sm.prs.length} PR${sm.prs.length>1?"s":""}</span>`:""}<small>${esc(s.date?fmtDate(s.date):"Before the app")}${s.nogym?" · No gym":""}</small></span>
-        <span class="m htime"><b class="${sm.durMin==null?"dim":""}">${esc(fmtDur(sm.durMin))}</b><span>${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></span></button>`; }).join("")}${all.length>ss.length?`<div class="list-foot"><button class="link" data-act="histmore">Show ${Math.min(20,all.length-ss.length)} more (${all.length-ss.length} older)</button></div>`:""}</section>
-    <section class="settings"><h2>Settings</h2>
+        <span class="m htime"><b class="${sm.durMin==null?"dim":""}">${esc(fmtDur(sm.durMin))}</b><span>${s.items.length} ${s.items.length===1?"exercise":"exercises"}</span></span></button>`; }).join("")}${all.length>ss.length?`<div class="list-foot"><button class="link" data-act="histmore">Show ${Math.min(20,all.length-ss.length)} more (${all.length-ss.length} older)</button></div>`:""}</section>`;
+}
+const gearBtn = () => `<button class="iconbtn gear" data-act="settings" aria-label="Settings">${ICON.gear}</button>`;
+const exPrefs = () => S.settings.exPref || {};
+const exNote = id => (S.settings.notes||{})[id] || "";
+const noteHTML = id => { const n = exNote(id);
+  return `<button class="note${n?"":" empty"}" data-act="note" data-id="${esc(String(id))}">${n ? `<span class="note-l">Note</span>${esc(n)}` : "+ Add a note (seat, grip, settings...)"}</button>`; };
+function viewSettings(){
+  const P = S.profile||{}, pr = exPrefs(), nFav = Object.values(pr).filter(v=>v==="fav").length, nNever = Object.values(pr).filter(v=>v==="never").length;
+  const prof = [P.height&&`${esc(P.height)} cm`, P.age&&`age ${esc(P.age)}`, +P.startW&&`start ${esc(fmtKg(+P.startW))}`, +P.goalW&&`goal ${esc(fmtKg(+P.goalW))}`].filter(Boolean).join(" · ");
+  return `<header class="pad hdr"><div class="eyebrow">Training</div><h1>Settings</h1><button class="iconbtn gear" data-act="setclose" aria-label="Close settings">${ICON.x}</button></header>
+    <section class="settings first"><h2>Workout</h2>
       <div class="srow"><span>Exercises per workout</span><div class="stepper"><button data-act="cnt" data-d="-1" aria-label="Fewer">−</button><output>${S.settings.count}</output><button data-act="cnt" data-d="1" aria-label="More">+</button></div></div>
       <div class="srow"><span>Weekly goal</span><div class="stepper"><button data-act="goal" data-k="weekGoal" data-d="-1" aria-label="Lower weekly goal">−</button><output>${weekGoal()}</output><button data-act="goal" data-k="weekGoal" data-d="1" aria-label="Raise weekly goal">+</button></div></div>
       <div class="srow"><span>Monthly goal</span><div class="stepper"><button data-act="goal" data-k="monthGoal" data-d="-1" aria-label="Lower monthly goal">−</button><output>${monthGoal()}</output><button data-act="goal" data-k="monthGoal" data-d="1" aria-label="Raise monthly goal">+</button></div></div>
       <div class="srow col"><span>Rest between sets</span><div class="chips wrap">${[["auto","Auto"],["60","60 s"],["90","90 s"],["120","2 min"],["180","3 min"]].map(([v,l])=>`<button class="chip${String(S.settings.rest||"auto")===v?" on":""}" data-act="restset" data-v="${v}">${l}</button>`).join("")}</div>
         <p class="fine">Auto: 2 min for heavy barbell and leg press lifts, 90 s for other compound lifts, 60 s for isolation, bodyweight and timed exercises.</p></div>
+      <button class="toggle" data-act="mute" aria-pressed="${!S.settings.mute}"><span>Sound<small class="fine" style="display:block;margin:2px 0 0">A beep when rest is over and when a timed hold ends.</small></span><i></i></button>
+      <button class="row setrow" data-act="prefs"><span class="nm">Favourites and never suggest<small>${nFav||nNever ? `${nFav} favourite${nFav===1?"":"s"}, ${nNever} never suggested` : "Set them on any exercise in Exercises"}</small></span><span class="m">›</span></button>
       <h2 class="sub">Backup</h2>
       <div class="srow"><button class="cta ghost half" data-act="export">Export all data</button><button class="cta ghost half" data-act="import">Import backup</button></div>
+      <div class="srow"><button class="cta ghost half" data-act="exportcsv">Export CSV</button><span class="fine half-note">Every set as a row, for Excel or Google Sheets.</span></div>
       <p class="fine">Your data is saved on this phone only. Export saves workouts, history, profile and weigh-ins in one file. Import shows what it will change and asks first. It only adds workouts and weigh-ins, it never deletes them.</p>
       <p class="fine bkstat">${S.settings.lastExport ? `Last exported file: ${esc(fmtDate(new Date(S.settings.lastExport).toISOString()))}.` : drive.connected ? "" : "No backup exported yet."}${drive.connected && drive.lastBackup ? ` <span class="good">Backed up automatically to Google Drive.</span>` : ""} ${storageState==="protected" ? `<span class="good">Storage is protected from automatic clearing.</span>` : storageState==="not protected" ? "This browser may clear the data if the app isn't opened for a while. Add it to your Home Screen and export a backup now and then." : ""}</p>
       ${driveSection()}
       <div class="srow col"><span>Safety copies</span><p class="fine" style="margin-top:4px">${snapInfo.n ? `${snapInfo.n} on this phone, newest ${esc(new Date(snapInfo.newest).toLocaleString(undefined,{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))}. The app saves one every day and before updates or restores.` : "The app saves a copy of your data every day and before updates or restores."}</p>
         ${snapInfo.n ? `<button class="link" style="align-self:flex-start;margin-top:8px" data-act="snapshots">Restore a safety copy</button>` : ""}</div>
+      <h2 class="sub">Profile</h2>
+      <button class="row setrow" data-act="profile"><span class="nm">${esc(P.name||"Your profile")}<small>${prof || "Height, age, starting and goal weight"}</small></span><span class="m">Edit</span></button>
       <h2 class="sub">App</h2>
       <div class="srow"><button class="cta ghost half" data-act="chkupd" id="bUpdate">Check for updates</button><button class="cta ghost half shareapp" data-act="shareapp">${ICON.qr}Share app</button></div>
       <p class="fine">${appVersion?`Version ${esc(appVersion)}. `:""}New versions also install on their own when you open the app online; Check for updates gets one right away.</p></section>`;
 }
 function viewBody(){
   const P = S.profile||{}, b = bodyStats();
-  const head = `<header class="pad"><div class="eyebrow">Body</div><h1>${esc(P.name||"Your body")}</h1></header>`;
+  const head = `<header class="pad hdr"><div class="eyebrow">Body</div><h1>${esc(P.name||"Your body")}</h1>${gearBtn()}</header>`;
   if(!hasProfile() && !b.w.length){
     return head + `<p class="lead">Set up your profile and log a weigh-in about once a week. You'll see your weight chart, and how much you've changed since you started and since last week.</p>
       <div class="dock"><button class="cta" data-act="profile">Set up profile</button></div>`;
@@ -1586,6 +1642,10 @@ function viewSheet(){
     return wrap(e.name, e.name, `<div class="grp">${GROUPS[e.group]}${musclesOf(e.id).length?` · works ${esc(muscleNames(musclesOf(e.id)).join(", "))}`:""}</div>${picHTML(e)}${e.desc?`<p class="how open">${esc(e.desc)}</p>`:""}
       <div class="stats sm"><div><b>${h.length}</b><span>times</span></div><div><b>${h.length?(best||"BW"):"–"}</b><span>best ${isTimed(sheet.id)?"seconds":"kg"}</span></div><div><b>${h.length?(maxW(h[h.length-1].it)||"BW"):"–"}</b><span>last ${isTimed(sheet.id)?"seconds":"kg"}</span></div></div>
       ${(()=>{ const hn=overloadHint(sheet.id); return !hn ? "" : hn.plateau ? `<p class="last"><span class="up">${esc(hn.text)}</span></p>` : `<p class="last">Last time <b>${esc(hn.last)}</b>. Next time ${esc(hn.text)}.</p>`; })()}
+      ${noteHTML(sheet.id)}
+      ${(()=>{ const v = exPrefs()[sheet.id];
+        return `<div class="prefbar"><button class="chip${v==="fav"?" on":""}" data-act="pref" data-id="${esc(String(sheet.id))}" data-v="fav" aria-pressed="${v==="fav"}">Favourite</button><button class="chip${v==="never"?" on":""}" data-act="pref" data-id="${esc(String(sheet.id))}" data-v="never" aria-pressed="${v==="never"}">Never suggest</button></div>
+        <p class="fine">${v==="fav" ? "Shows up more often when the workout is shuffled." : v==="never" ? "Left out when the workout is shuffled. You can still add it yourself." : "Favourites show up more often in shuffled workouts; never-suggested ones are left out."}</p>`; })()}
       ${progressChart(sheet.id, h)}
       <div class="list">${h.slice().reverse().map(x=>`<div class="row static"><span class="nm">${esc(sessionTitle(x.s))}<small>${esc(x.s.date?fmtDate(x.s.date):"Before the app")}</small></span><span class="m"><b>${esc(setSummary(x.it))}</b></span></div>`).join("") || `<p class="lead">Not logged yet${e.startW?`. Your sheet had it at ${esc(fmtW(e.startW))}, ${e.sets} × ${e.reps}`:""}.</p>`}</div>
       ${S.plan && !focus?`<button class="cta ghost wide" data-act="addthis" data-id="${sheet.id}">Add to today</button>`:""}`);
@@ -1612,7 +1672,7 @@ function viewSheet(){
   if(sheet.type==="summary"){
     const sess = allSessions().find(x=>x.id===sheet.id); if(!sess) return "";
     return wrap("Workout summary","Workout summary", summaryHTML(sess) + `<button class="cta wide" data-act="close">Done</button>`
-      + (sess.seed ? "" : `<button class="link danger delw" data-act="delsess" data-id="${esc(sess.id)}">Delete this workout</button>`));
+      + (sess.seed ? "" : `<button class="cta ghost wide" data-act="editsess" data-id="${esc(sess.id)}">Edit this workout</button><button class="link danger delw" data-act="delsess" data-id="${esc(sess.id)}">Delete this workout</button>`));
   }
   if(sheet.type==="prs"){
     const prs = computePRs(), when = s => s.date ? fmtDate(s.date) : "Before the app";
@@ -1665,6 +1725,33 @@ function viewSheet(){
       <button class="cta wide" data-act="dorestore">Restore</button>
       <button class="cta ghost wide" data-act="close">Cancel</button>`);
   }
+  if(sheet.type==="note"){
+    const e = exById(sheet.id);
+    return wrap("Note", "Note", `<p class="how open">${esc(e?e.name:"")}. Shown on this exercise every time, for example seat height or grip.</p>
+      <textarea id="note-t" class="notebox" rows="4" maxlength="300" placeholder="Seat 4, pin 7, wide grip">${esc(exNote(sheet.id))}</textarea>
+      <button class="cta wide" data-act="notesave" data-id="${esc(String(sheet.id))}">Save note</button>
+      ${exNote(sheet.id) ? `<button class="link danger delw" data-act="notedel" data-id="${esc(String(sheet.id))}">Delete note</button>` : ""}`);
+  }
+  if(sheet.type==="prefs"){
+    const pr = exPrefs(), ids = Object.keys(pr).filter(id=>exById(/^\d+$/.test(id)?+id:id));
+    const list = v => ids.filter(id=>pr[id]===v).map(id=>{ const e = exById(/^\d+$/.test(id)?+id:id);
+      return `<div class="row static"><span class="nm">${esc(e.name)}<small>${esc(GROUPS[e.group]||"")}</small></span><button class="link" data-act="prefclear" data-id="${esc(id)}">Remove</button></div>`; }).join("");
+    const fav = list("fav"), never = list("never");
+    return wrap("Favourites and never suggest", "Favourites", `<p class="how open">Tap any exercise in Exercises to mark it. Favourites show up more often in shuffled workouts; never-suggested ones are left out.</p>
+      <div class="list"><div class="sec"><span>Favourites</span></div>${fav || `<p class="fine">None yet.</p>`}</div>
+      <div class="list"><div class="sec"><span>Never suggest</span></div>${never || `<p class="fine">None yet.</p>`}</div>`);
+  }
+  if(sheet.type==="editsess"){
+    const s = S.sessions.find(x=>x.id===sheet.id); if(!s) return "";
+    const inp = (id, val, label) => `<input id="${id}" class="esin" inputmode="decimal" value="${esc(val===null||val===undefined?"":String(val))}" aria-label="${label}" autocomplete="off">`;
+    const body = s.items.map((it,i)=>{ const e = exById(it.ex), timed = isTimed(it.ex);
+      return `<div class="esx"><div class="esx-h">${esc(e?e.name:"Exercise")}<span>${timed?"seconds":"kg × reps"}</span></div>
+        ${it.sets.map((x,j)=>`<div class="esrow" data-i="${i}" data-j="${j}"><span class="esn">${j+1}</span>${timed
+          ? inp(`es-${i}-${j}-w`, x.w, `Set ${j+1} seconds`)+`<span class="esx-u">s</span><span></span>`
+          : inp(`es-${i}-${j}-w`, x.w, `Set ${j+1} kg`)+`<span class="esx-u">×</span>`+inp(`es-${i}-${j}-r`, x.r, `Set ${j+1} reps`)}<button class="iconbtn esdel" data-act="esdel" data-i="${i}" data-j="${j}" aria-label="Remove set ${j+1}">${ICON.x}</button></div>`).join("")}</div>`; }).join("");
+    return wrap("Edit workout", "Edit workout", `<p class="how open">${esc(sessionTitle(s))}${s.date?`, ${esc(fmtDate(s.date))}`:""}. Fix a weight or a rep count. A safety copy is saved first.</p>${body}
+      <button class="cta wide" data-act="essave">Save changes</button><button class="cta ghost wide" data-act="close">Cancel</button>`);
+  }
   if(sheet.type==="newex"){
     return wrap("New exercise","New exercise",`<input id="nx-name" class="search" placeholder="Exercise name" aria-label="Exercise name">
       <div class="chips wrap">${ORDER.map(g=>`<button class="chip${sheet.g===g?" on":""}" data-act="nxg" data-g="${g}">${GROUPS[g]}</button>`).join("")}</div>
@@ -1698,7 +1785,7 @@ function render(keepScroll=true){
   document.body.classList.toggle("holding", !!(focus && hold));
   // a data problem is shown on every tab, not only Today
   const alertTop = !focus && tab!=="today" ? dataBanner() : "";
-  $app.innerHTML = alertTop + (focus ? viewFocus() + holdOverlay() : tab==="today"?viewToday():tab==="exercises"?viewExercises():tab==="body"?viewBody():viewHistory()) + viewSheet();
+  $app.innerHTML = alertTop + (focus ? viewFocus() + holdOverlay() : tab==="today"?viewToday():tab==="exercises"?viewExercises():tab==="body"?viewBody():tab==="settings"?viewSettings():viewHistory()) + viewSheet();
   document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===tab?"page":"false"));
   if(keepScroll) window.scrollTo(0,y);
   hydrateIll();
@@ -1727,6 +1814,7 @@ window.addEventListener("popstate", ()=>{
   const hadSheet = !!sheet;
   if(sheet) sheet = null;
   else if(focus){ focus = null; window.scrollTo(0,0); }
+  else if(tab==="settings" && prevTab && prevTab!=="today"){ tab = prevTab; try{ history.replaceState(null,"","#"+tab); }catch(_){} window.scrollTo(0,0); }
   else if(tab!=="today"){ tab = "today"; try{ history.replaceState(null,"","#today"); }catch(_){} window.scrollTo(0,0); }
   render(hadSheet);
 });
@@ -1785,7 +1873,7 @@ $app.addEventListener("click", e=>{
     case "restskip": if(rest){ rest=null; releaseWake(); render(); } break;
     case "rest30": if(rest && !rest.over){ rest.end+=30000; rest.total+=30000; tickRest(); } break;
     case "restgo": rest=null; render(); break;   // kept for any old screen still showing it
-    case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(hold) render(); else if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=dockHTML(); break;
+    case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(hold || tab==="settings") render(); else if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=dockHTML(); break;
     case "addkg": S.plan.items[i].addKg = true; persistPlan(); render(); break;
     case "plateauoff": S.plan.items[i].plateauOff = true; persistPlan(); render(); break;
     case "usehint": {
@@ -1803,6 +1891,23 @@ $app.addEventListener("click", e=>{
       S.plan.items.push(buildItem(idOf(b.dataset.id))); persistPlan(); sheet=null; focus=null; tab="today"; render(false); toast("Added to today"); break; }
     case "detail": sheet={type:"detail",id:idOf(b.dataset.id)}; render(); break;
     case "close": sheet=null; render(); break;
+    case "exportcsv": exportCSV(); break;
+    case "prefs": sheet={type:"prefs"}; render(); break;
+    case "pref": { const id=b.dataset.id, v=b.dataset.v, pr=Object.assign({}, exPrefs());
+      if(pr[id]===v) delete pr[id]; else pr[id]=v; S.settings.exPref=pr; persistSettings(); haptic(); render();
+      toast(pr[id]==="fav" ? "Added to favourites" : pr[id]==="never" ? "Won't be suggested" : v==="fav" ? "Removed from favourites" : "Can be suggested again"); break; }
+    case "prefclear": { const pr=Object.assign({}, exPrefs()); delete pr[b.dataset.id]; S.settings.exPref=pr; persistSettings(); render(); break; }
+    case "note": sheet={type:"note", id:idOf(b.dataset.id), back:sheet}; render(); setTimeout(()=>document.getElementById("note-t")?.focus(), 250); break;
+    case "notesave": case "notedel": { const id=b.dataset.id, notes=Object.assign({}, S.settings.notes||{});
+      const v = a==="notesave" ? (document.getElementById("note-t")?.value||"").trim().slice(0,300) : "";
+      if(v) notes[id]=v; else delete notes[id];
+      S.settings.notes=notes; persistSettings(); const back=sheet&&sheet.back; sheet = back && back.type==="detail" ? back : null; render(); toast(v?"Note saved":"Note deleted"); break; }
+    case "editsess": sheet={type:"editsess", id:b.dataset.id, back:sheet}; render(); break;
+    case "esdel": { const row=b.closest(".esrow"); if(!row) break; const gone=row.classList.toggle("gone");
+      row.querySelectorAll("input").forEach(x=>x.disabled=gone); b.setAttribute("aria-label", gone?"Keep this set":"Remove this set"); break; }
+    case "essave": saveSessionEdit(); break;
+    case "settings": if(tab!=="settings") prevTab = tab; tab="settings"; sheet=null; render(false); window.scrollTo(0,0); try{ history.replaceState(history.state,"","#settings"); }catch(_){} break;
+    case "setclose": tab = prevTab || "today"; render(false); window.scrollTo(0,0); try{ history.replaceState(history.state,"","#"+tab); }catch(_){} break;
     case "discard": if(confirm("Discard today's workout?")){ S.plan=null; nogymNext=false; rest=null; hold=null; releaseWake(); persistPlan(); render(false); } break;
     case "finish": finish(); break;
     case "fg": filterGroup=b.dataset.g; render(); break;
@@ -1949,17 +2054,57 @@ function finish(fromDone=false){
   render(false); window.scrollTo(0,0); if(!fromDone) toast(`Workout ${S.sessions.length} saved`+(prs?`, ${prs} new PR${prs>1?"s":""}`:""));
   return s;
 }
-async function exportBackup(){
-  const data = JSON.stringify(backupData(),null,1);
-  const name = "training-backup-"+new Date().toISOString().slice(0,10)+".json";
+// Saves a file: the phone's share sheet where it can (Files, Drive, mail...), otherwise a download.
+// Returns false only when you cancel the share sheet.
+async function saveFile(data, name, type, title){
   try{
-    const file = new File([data], name, {type:"application/json"});
-    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:"Training backup"}); markExported(); return; }
-  }catch(err){ if(err && err.name==="AbortError") return; }
-  const url = URL.createObjectURL(new Blob([data],{type:"application/json"}));
+    const file = new File([data], name, {type});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title}); return true; }
+  }catch(err){ if(err && err.name==="AbortError") return false; }
+  const url = URL.createObjectURL(new Blob([data],{type}));
   const a = document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 2000); markExported(); toast("Backup saved");
+  setTimeout(()=>URL.revokeObjectURL(url), 2000); toast(title+" saved");
+  return true;
 }
+async function exportBackup(){
+  const name = "training-backup-"+new Date().toISOString().slice(0,10)+".json";
+  if(await saveFile(JSON.stringify(backupData(),null,1), name, "application/json", "Backup")) markExported();
+}
+// Spreadsheet: one row per set, oldest first. Timed exercises have seconds instead of kg and reps.
+function csvData(){
+  const q = v => { const s = v===null||v===undefined ? "" : String(v); return /[",\n;]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const rows = [["Date","Time","Workout","Exercise","Group","Set","Weight (kg)","Reps","Seconds","No gym"]];
+  for(const s of allSessions()){
+    const d = s.date ? new Date(s.date) : null, title = sessionTitle(s);
+    const date = d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` : "";
+    const time = d ? `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}` : "";
+    for(const it of s.items){ const e = exById(it.ex), timed = isTimed(it.ex);
+      it.sets.forEach((x,k)=>rows.push([date, time, title, e?e.name:String(it.ex), e?GROUPS[e.group]||"":"", k+1,
+        timed?"":(+x.w||0), timed?"":(x.r===""||x.r==null?"":+x.r), timed?(+x.w||0):"", s.nogym?"yes":""])); }
+  }
+  return "\ufeff" + rows.map(r=>r.map(q).join(",")).join("\r\n") + "\r\n";   // BOM so Excel reads accents correctly
+}
+// Editing a past workout: a safety copy first, then the new numbers; PRs and the summary are recalculated.
+async function saveSessionEdit(){
+  const s = S.sessions.find(x=>x.id===sheet?.id); if(!s) return;
+  const num = (v, int) => { const n = parseFloat(String(v).replace(",",".")); return isFinite(n) && n>=0 ? (int?Math.round(n):Math.round(n*100)/100) : 0; };
+  const items = [];
+  s.items.forEach((it,i)=>{ const timed = isTimed(it.ex), sets = [];
+    it.sets.forEach((x,j)=>{ const row = document.querySelector(`.esrow[data-i="${i}"][data-j="${j}"]`);
+      if(!row || row.classList.contains("gone")) return;
+      const w = document.getElementById(`es-${i}-${j}-w`).value, r = document.getElementById(`es-${i}-${j}-r`);
+      sets.push(Object.assign({}, x, {w: num(w, timed), r: timed ? x.r : num(r.value, true)})); });
+    if(sets.length) items.push(Object.assign({}, it, {sets})); });
+  if(!items.length){ toast("Keep at least one set, or delete the workout instead"); return; }
+  if(JSON.stringify(items)===JSON.stringify(s.items)){ sheet = sheet.back || null; render(); return; }
+  try{ await takeSnapshot("edit"); }catch(_){}
+  const old = s.summary;
+  s.items = items; s.edited = new Date().toISOString(); delete s.summary;
+  histVer++;
+  try{ s.summary = Object.assign(buildSummary(s, false), old ? {durMin: old.durMin ?? null, recs: old.recs} : {}); }catch(_){}
+  saveLocal(); sheet = {type:"summary", id:s.id}; render(); toast("Workout updated");
+}
+function exportCSV(){ return saveFile(csvData(), "training-history-"+new Date().toISOString().slice(0,10)+".csv", "text/csv", "Spreadsheet"); }
 function markExported(){ S.settings.lastExport = Date.now(); S.settings.lastExportCount = S.sessions.length; delete S.settings.bkSnooze; persistSettings(); render(); }
 document.getElementById("restore").addEventListener("change", async e=>{
   const f = e.target.files[0]; e.target.value=""; if(!f) return;
@@ -1989,7 +2134,8 @@ function applyRestore(v){
   r.custom.forEach(c=>S.custom.push(c));
   if(r.profDiffers) S.profile = Object.assign({}, r.prof);
   if(r.sheetNew){ S.sheet = v.sheet; _seedCache = null; }
-  if(v.settings) S.settings = Object.assign(S.settings, v.settings);
+  if(v.settings){ const notes = Object.assign({}, v.settings.notes||{}, S.settings.notes||{}), pref = Object.assign({}, v.settings.exPref||{}, S.settings.exPref||{});
+    S.settings = Object.assign(S.settings, v.settings, {notes, exPref: pref}); }
   if(r.plan){ S.plan = migrate(v.plan); }
   persistSettings(); if(r.plan) persistPlan();
   sheet = null; render(false);
@@ -2304,8 +2450,11 @@ driveLoad();
 upgradeData();
 if(drive.connected){ if(drive.pending) scheduleDriveBackup(3000); else scheduleDriveBackup(); }
 window.addEventListener("online", ()=>{ if(drive.connected && drive.pending) scheduleDriveBackup(1500); });
-dailySnapshot().then(()=>{ if(!focus && (tab==="history" || loadProblem)) render(); });
-const h = location.hash.slice(1); if(["today","exercises","history","body"].includes(h)) tab=h;
+// Older workouts saved before summaries existed: build their summaries in the background after
+// launch, so opening History is instant.
+(window.requestIdleCallback || (f=>setTimeout(f, 1200)))(()=>{ try{ allSessions().slice(-20).forEach(summaryOf); }catch(_){} });
+dailySnapshot().then(()=>{ if(!focus && (tab==="settings" || loadProblem)) render(); });
+const h = location.hash.slice(1); if(["today","exercises","history","body","settings"].includes(h)) tab=h;
 if(h==="weighin"){ tab="body"; sheet={type:"weighin"}; }
 render();
 window.addEventListener("hashchange", ()=>{ if(location.hash==="#weighin"){ focus=null; tab="body"; sheet={type:"weighin"}; render(false); } });
@@ -2315,7 +2464,7 @@ if("serviceWorker" in navigator){
     if(reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
     reg.addEventListener("updatefound", ()=>{ const w = reg.installing;
       if(w) w.addEventListener("statechange", ()=>{ if(w.state==="installed" && navigator.serviceWorker.controller) offerUpdate(w); }); });
-    readVersion().then(()=>{ if(tab==="history" && !focus) render(); });
+    readVersion().then(()=>{ if(tab==="settings" && !focus) render(); });
     // An installed app is often just brought back from the background: look for a new version then.
     document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
   }).catch(()=>{}));

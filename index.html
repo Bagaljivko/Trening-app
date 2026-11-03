@@ -346,6 +346,9 @@ h2.sub{font-size:16px;margin:28px 0 0}
 .banner p small{display:block;color:var(--mut);font-size:12.5px}
 .bkstat .good{color:var(--neon-txt)}
 .b-acts{display:flex;align-items:center;gap:4px;margin-left:auto}
+.b-acts.col{flex-direction:column;align-items:stretch;gap:6px;margin-left:0;width:100%}
+.banner.bad{border-color:var(--del)}
+.pill.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 .cta.shareapp{gap:8px}
 .cta.shareapp svg{width:18px;height:18px;fill:currentColor;flex:none}
 .qr-box{background:#fff;border-radius:14px;padding:10px;width:min(260px,70vw);margin:8px auto 14px}
@@ -444,8 +447,22 @@ let nogymNext = false;
 let histShown = 20;      // History shows the newest 20 workouts, then "Show more"   // "No gym" picked before building; never saved, so the next workout starts as gym
 
 /* ---------- data ---------- */
+// If the saved data can't be read, keep it untouched and stop saving, so nothing overwrites it.
+let loadProblem = null, saveProblem = null;
 function loadLocal(){
-  try{ const raw = localStorage.getItem(LS_KEY); if(raw) S = Object.assign(S, JSON.parse(raw)); }catch(e){}
+  let raw = null;
+  try{ raw = localStorage.getItem(LS_KEY); }catch(e){ raw = null; }   // storage blocked (e.g. private mode): nothing to protect
+  if(raw){
+    try{
+      const v = JSON.parse(raw);
+      if(!v || typeof v!=="object" || Array.isArray(v) || (v.sessions!==undefined && !Array.isArray(v.sessions))) throw new Error("not training data");
+      S = Object.assign(S, v);
+    }catch(e){
+      loadProblem = {raw, at: Date.now()};
+      try{ localStorage.setItem(LS_KEY+".unreadable", raw); }catch(_){}
+    }
+  }
+  if(!Array.isArray(S.sessions)) S.sessions = [];
   if(!S.profile || typeof S.profile!=="object") S.profile = {};
   if(!Array.isArray(S.weighins)) S.weighins = [];
   S.sessions.forEach(migrate); if(S.plan) migrate(S.plan);
@@ -456,7 +473,17 @@ function sessionTitle(s){
   return "Workout "+(myNumbered().findIndex(x=>x.id===s.id)+1);
 }
 function saveLocal(){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
+  if(loadProblem) return false;                 // never write over data we couldn't read
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify(S));
+    if(saveProblem){ saveProblem = null; setTimeout(()=>{ if(!focus) render(); }, 0); }
+    return true;
+  }catch(e){
+    const first = !saveProblem;
+    saveProblem = {name: (e && e.name) || "Error", at: Date.now()};
+    if(first){ toast("Couldn't save. Export a backup now"); setTimeout(()=>{ if(!focus) render(); }, 0); }
+    return false;
+  }
 }
 function exObj(e,i){ return {id:i,name:e[0],group:e[1],desc:e[2],startW:(S.sheet?.startW?.[i] ?? e[3]),sets:e[4],reps:e[5],freq:e[6]}; }
 function ngObj(n){ return {id:n.id, name:n.name, group:n.group, desc:n.desc, startW:n.timed?n.secs:0, sets:n.sets, reps:n.reps||"", freq:0, nogym:true}; }
@@ -908,6 +935,18 @@ async function protectStorage(){
   }catch(_){}
   if(tab==="history" && !focus) render();
 }
+function dataBanner(){
+  if(loadProblem) return `<div class="banner bad" role="alert"><p>Your saved data couldn't be read<small>Nothing has been changed or overwritten. New changes aren't saved until you choose what to do.</small></p>
+    <span class="b-acts col"><button class="pill" data-act="dlraw">Download it</button>${typeof hasSnapshots!=="undefined" && hasSnapshots ? `<button class="pill ghost" data-act="snapshots">Restore a safety copy</button>` : ""}<button class="link danger" data-act="freshstart">Start fresh</button></span></div>`;
+  if(saveProblem) return `<div class="banner bad" role="alert"><p>Your latest changes couldn't be saved<small>${saveProblem.name==="QuotaExceededError" ? "The storage for this app is full." : "The browser refused to save."} Export a backup so nothing gets lost.</small></p>
+    <span class="b-acts"><button class="pill" data-act="export">Export</button></span></div>`;
+  return "";
+}
+function downloadText(name, text){
+  const url = URL.createObjectURL(new Blob([text], {type:"application/json"}));
+  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
 function backupDue(){
   const n = S.sessions.length, st = S.settings;
   if(n < 3 || (st.bkSnooze && Date.now() < st.bkSnooze)) return null;
@@ -963,7 +1002,7 @@ function heroBlock(){
 function itemState(it){ const d=it.sets.filter(s=>s.done).length; return {d, n:it.sets.length, all:d===it.sets.length}; }
 function viewToday(){
   const num = S.sessions.length + 1;
-  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>` + (backupBanner() || weighBanner());
+  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>` + (dataBanner() || backupBanner() || weighBanner());
   if(!S.plan || !S.plan.items.length){
     const last = allSessions().slice(-1)[0];
     const rec = muscleNames(recentMuscles());
@@ -1371,6 +1410,9 @@ $app.addEventListener("click", e=>{
     case "shareapp": shareAppSheet(); break;
     case "sendlink": navigator.share({title:"Training log", text:"Training log: workouts, progress and body tracking", url:appUrl()}).catch(()=>{}); break;
     case "copylink": { const url = appUrl(); (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(()=>toast("Link copied"), ()=>toast(url)); break; }
+    case "dlraw": if(loadProblem) downloadText("training-unreadable-"+new Date().toISOString().slice(0,10)+".json", loadProblem.raw); break;
+    case "freshstart": if(loadProblem && confirm("Start with empty data? The unreadable data stays saved on this phone as a separate copy, and you can still download it from here first.")){
+      loadProblem = null; saveLocal(); render(false); toast("Started fresh. The old data is kept as a copy"); } break;
     case "bksnooze": S.settings.bkSnooze = Date.now()+3*864e5; persistSettings(); render(); break;
     case "wisnooze": S.settings.wiSnooze=ymd(new Date()); persistSettings(); render(); break;
     case "winotify": toggleNotify(); break;

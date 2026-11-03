@@ -435,7 +435,6 @@ let rest = null, hold = null, actx = null, wakeLock = null;
 let tab = "today", filterGroup = "all", query = "", sheet = null;
 let nogymNext = false;
 let histShown = 20;      // History shows the newest 20 workouts, then "Show more"   // "No gym" picked before building; never saved, so the next workout starts as gym
-let db = null, uid = null, saveTimer = null;
 
 /* ---------- data ---------- */
 function loadLocal(){
@@ -448,13 +447,6 @@ function myNumbered(){ return S.sessions.slice().sort((a,b)=>a.date.localeCompar
 function sessionTitle(s){
   if(s.seed) return "Spreadsheet workout T"+s.label;
   return "Workout "+(myNumbered().findIndex(x=>x.id===s.id)+1);
-}
-function progress(){
-  const now = new Date();
-  const wk = new Date(now); wk.setHours(0,0,0,0); wk.setDate(wk.getDate()-((wk.getDay()+6)%7));
-  const mo = new Date(now.getFullYear(), now.getMonth(), 1);
-  const ds = S.sessions.map(s=>new Date(s.date));
-  return {week:ds.filter(d=>d>=wk).length, month:ds.filter(d=>d>=mo).length, total:S.sessions.length};
 }
 function saveLocal(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
@@ -744,50 +736,10 @@ function swap(i){
   persistPlan(); render();
 }
 
-/* ---------- persistence ---------- */
-function persistPlan(){
-  S.updated = Date.now(); saveLocal();
-  if(!db) return;
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(()=>{ ref("plan").set({plan:S.plan, updated:S.updated}).catch(()=>{}); }, 900);
-}
-function persistSettings(){
-  saveLocal();
-  if(db) ref("settings").set({settings:S.settings, custom:S.custom, profile:S.profile, weighins:S.weighins}).catch(()=>{});
-}
-function ref(id){ return db.collection("data/users/"+uid).doc(id); }
-async function persistSession(s){
-  saveLocal();
-  if(!db) return;
-  try{ await ref("s-"+s.id).set({session:s}); }
-  catch(e){ if(e && e.code==="quota_exceeded") toast("Cloud storage is full. Saved on this phone only."); }
-}
-async function connect(){
-  if(!window.claude || !window.claude.use) return;
-  try{
-    const [d,u] = await Promise.all([claude.use("db"), claude.use("user")]);
-    if(!d || !u) return;
-    const id = await u.id(); if(!id) return;
-    db = d; uid = id;
-    const snap = await db.collection("data/users/"+uid).get();
-    let changed = false, cloudPlan = null;
-    const have = new Set(S.sessions.map(s=>s.id));
-    snap.docs.forEach(doc=>{
-      const v = doc.data(); if(!v) return;
-      if(doc.id==="plan") cloudPlan = v;
-      else if(doc.id==="settings"){ if(v.settings) S.settings = Object.assign(S.settings, v.settings);
-        (v.custom||[]).forEach(c=>{ if(!S.custom.find(x=>x.id===c.id)) S.custom.push(c); });
-        if(v.profile && !Object.keys(S.profile).length) S.profile = v.profile;
-        (v.weighins||[]).forEach(w=>{ if(w && w.id && !S.weighins.find(x=>x.id===w.id)) S.weighins.push(w); }); changed = true; }
-      else if(doc.id.startsWith("s-") && v.session && !have.has(v.session.id)){ S.sessions.push(migrate(v.session)); changed = true; }
-    });
-    if(cloudPlan && (cloudPlan.updated||0) > (S.updated||0)){ S.plan = migrate(cloudPlan.plan); S.updated = cloudPlan.updated; changed = true; }
-    // push anything only on this phone
-    const cloudIds = new Set(snap.docs.map(d=>d.id));
-    for(const s of S.sessions) if(!cloudIds.has("s-"+s.id)) await ref("s-"+s.id).set({session:s}).catch(()=>{});
-    if(changed){ saveLocal(); render(); }
-  }catch(e){ db = null; }
-}
+/* ---------- persistence (this phone only; Export/Import moves data between phones) ---------- */
+function persistPlan(){ S.updated = Date.now(); saveLocal(); }
+function persistSettings(){ saveLocal(); }
+function persistSession(s){ saveLocal(); }
 
 /* ---------- helpers ---------- */
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1331,7 +1283,7 @@ $app.addEventListener("click", e=>{
       S.settings[k] = Math.max(1, Math.min(mx, cur + +b.dataset.d)); persistSettings(); render(); break; }
     case "restset": S.settings.rest = b.dataset.v; persistSettings(); render(); break;
     case "cnt": S.settings.count=Math.max(3,Math.min(10,S.settings.count+ +b.dataset.d)); persistSettings(); render(); break;
-    case "delsess": if(confirm("Delete this workout from your history?")){ const id=b.dataset.id; S.sessions=S.sessions.filter(s=>s.id!==id); histVer++; saveLocal(); if(db) ref("s-"+id).delete().catch(()=>{}); sheet=null; render(); toast("Workout deleted"); } break;
+    case "delsess": if(confirm("Delete this workout from your history?")){ const id=b.dataset.id; S.sessions=S.sessions.filter(s=>s.id!==id); histVer++; saveLocal(); sheet=null; render(); toast("Workout deleted"); } break;
     case "newex": sheet={type:"newex",g:"legs"}; render(); setTimeout(()=>document.getElementById("nx-name")?.focus(),50); break;
     case "nxg": { const nm=document.getElementById("nx-name").value; sheet.g=b.dataset.g; render(); document.getElementById("nx-name").value=nm; break; }
     case "nxsave": { const nm=document.getElementById("nx-name").value.trim(); if(!nm) return toast("Type a name first");
@@ -1650,7 +1602,6 @@ function undoLast(){
   undoState = null; clearTimeout(undoTimer); document.querySelector(".utoast")?.remove();
   if(u.session){                                   // the workout was just saved: take it back out
     S.sessions = S.sessions.filter(x=>x.id!==u.session); histVer++;
-    if(db) ref("s-"+u.session).delete().catch(()=>{});
     sheet = null; tab = u.tab;
   }
   S.plan = u.plan; focus = u.focus; selSet = u.selSet; rest = null; justDone = null; releaseWake();

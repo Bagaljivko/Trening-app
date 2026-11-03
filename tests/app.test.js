@@ -109,6 +109,59 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- native app feel
+  console.log("native app feel");
+  {
+    const { ctx, page } = await open(browser, URL, busy, { mobile: true });
+    const sel = await page.evaluate(() => ["h1", "main p", ".row", ".nav span", "main"].map(s => document.querySelector(s)).filter(Boolean).map(el => getComputedStyle(el).userSelect));
+    check("no text can be selected anywhere", sel.length >= 3 && sel.every(v => v === "none"), sel.join(","));
+    const cm = await page.evaluate(() => { const e = new MouseEvent("contextmenu", { bubbles: true, cancelable: true }); document.querySelector("main").dispatchEvent(e); return e.defaultPrevented; });
+    check("long-press never opens the browser menu", cm);
+    check("the app frame never bounces", await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY === "none" && getComputedStyle(document.documentElement).webkitTextSizeAdjust === "100%"));
+    const tc = await page.$$eval('meta[name="theme-color"]', ms => ms.map(m => m.media + "=" + m.content).join("|"));
+    check("status bar colour follows light and dark mode", /light\)=#F5F5F7/.test(tc) && /dark\)=#000000/.test(tc), tc);
+    const imgs = await page.$$eval('link[rel="apple-touch-startup-image"]', ls => ls.map(l => l.getAttribute("href")));
+    const missing = imgs.filter(h => !fs.existsSync(path.join(ROOT, h)));
+    check("iPhone launch screens exist for light and dark", imgs.length === 26 && missing.length === 0, missing.join(","));
+
+    // Android back: a sheet closes first, then the tab returns to Today; the app stays open
+    await page.click('[data-tab="exercises"]'); await page.click('[data-act="detail"]');
+    check("an open sheet locks the screen behind it", await page.evaluate(() => document.documentElement.classList.contains("locked") && getComputedStyle(document.body).overflowY === "hidden"));
+    const bd = await page.evaluate(() => { const bg = document.querySelector(".sheet-bg"); const tch = new Touch({ identifier: 1, target: bg, clientX: 20, clientY: 40 });
+      const e = new TouchEvent("touchmove", { touches: [tch], targetTouches: [tch], changedTouches: [tch], bubbles: true, cancelable: true }); bg.dispatchEvent(e); return e.defaultPrevented; });
+    check("dragging the dimmed area doesn't scroll the screen behind", bd);
+    await page.goBack(); await page.waitForTimeout(150);
+    check("Back closes the sheet first", !(await page.$(".sheet")) && (await page.evaluate(() => tab)) === "exercises");
+    await page.goBack(); await page.waitForTimeout(150);
+    check("Back then returns to Today", (await page.evaluate(() => tab)) === "today" && !!(await page.$('[data-tab="today"][aria-current="page"]')));
+    // closing with the X and then Back needs only one press to reach Today
+    await page.click('[data-tab="history"]'); await page.click('[data-tab="body"]'); await page.click('[data-tab="today"]');
+    await page.waitForTimeout(150);
+    check("no leftover Back steps after returning to Today", await page.evaluate(() => !backGuard));
+
+    // Back from the exercise screen keeps the logged set
+    await page.click('[data-act="open"][data-i="0"]');
+    await page.evaluate(() => { window.__vib = []; navigator.vibrate = p => { window.__vib.push(p); return true; }; });
+    await page.click('#ctaBox [data-act="done"]');
+    check("a logged set gives a short vibration", (await page.evaluate(() => window.__vib)).includes(35));
+    await page.goBack(); await page.waitForTimeout(150);
+    check("Back leaves the exercise screen and keeps the set", (await page.evaluate(() => !focus && tab === "today")) && (await stored(page)).plan.items[0].sets[0].done === true);
+
+    // drag a sheet down to close it; a short drag springs back
+    const drag = dist => page.evaluate(async d => {
+      const h = document.querySelector(".sheet-h"); const pt = y => new Touch({ identifier: 7, target: h, clientX: 150, clientY: y });
+      const fire = (type, y) => { const tt = type === "touchend" ? [] : [pt(y)]; h.dispatchEvent(new TouchEvent(type, { touches: tt, targetTouches: tt, changedTouches: [pt(y)], bubbles: true, cancelable: true })); };
+      fire("touchstart", 300); for (let y = 300; y <= 300 + d; y += 20) { fire("touchmove", y); await new Promise(r => setTimeout(r, 30)); } fire("touchend", 300 + d);
+      await new Promise(r => setTimeout(r, 350)); return !!document.querySelector(".sheet");
+    }, dist);
+    await page.click('[data-tab="exercises"]'); await page.click('[data-act="detail"]');
+    check("a short drag down leaves the sheet open", await drag(40));
+    check("dragging a sheet down closes it", !(await drag(220)));
+    check("closing by drag leaves no extra Back step", await page.evaluate(() => { history.back(); return true; }) && (await page.waitForTimeout(200), (await page.evaluate(() => tab)) === "today"));
+    check("native feel: no page errors", page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- backup
   console.log("backup and restore");
   {

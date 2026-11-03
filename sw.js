@@ -1,6 +1,6 @@
 // Offline support: keep the app shell and all exercise pictures cached, refresh them in the background.
-const CACHE = "training-v9";
-const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
+const CACHE = "training-v10";
+const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "qr.js",
   "images/archer-push-up.svg",
   "images/arnold-press-standing.svg",
   "images/back-extension.svg",
@@ -152,6 +152,7 @@ self.addEventListener("activate", e => {
 });
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
+  if (e.request.cache === "no-store") return;   // "Check for updates" asks the network directly
   e.respondWith(caches.open(CACHE).then(async cache => {
     const cached = await cache.match(e.request);
     const network = fetch(e.request).then(res => { if (res && (res.ok || res.type === "opaque")) cache.put(e.request, res.clone()); return res; }).catch(() => cached);

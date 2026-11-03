@@ -346,6 +346,13 @@ h2.sub{font-size:16px;margin:28px 0 0}
 .banner p small{display:block;color:var(--mut);font-size:12.5px}
 .bkstat .good{color:var(--neon-txt)}
 .b-acts{display:flex;align-items:center;gap:4px;margin-left:auto}
+.cta.shareapp{gap:8px}
+.cta.shareapp svg{width:18px;height:18px;fill:currentColor;flex:none}
+.qr-box{background:#fff;border-radius:14px;padding:10px;width:min(260px,70vw);margin:8px auto 14px}
+.qr-svg{display:block;width:100%;height:auto}
+.qr-hint{text-align:center;margin:0 0 6px;font-size:15px}
+.qr-url{text-align:center;font-size:13px;color:var(--mut);word-break:break-all;margin:0}
+.update-bar{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:35;max-width:496px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 8px 8px 16px;border-radius:18px;background:var(--s1);border:1px solid var(--neon-d);box-shadow:0 8px 24px rgb(0 0 0 / .35);font-size:14px;font-weight:600}
 .pill{height:38px;padding:0 16px;border-radius:19px;background:var(--neon);color:var(--neon-ink);font-weight:700;font-size:14px;white-space:nowrap}
 .bstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:24px 24px 0}
 .bstats div{display:flex;flex-direction:column;min-width:0}
@@ -772,7 +779,8 @@ function toast(msg){
 const ICON = {
   check:'<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   swap:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>',
-  x:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  qr:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm8-2h2v2h-2zm2 2h2v2h-2zm-2 2h2v2h-2zm4 0h2v4h-4v-2h2zm0-4h2v2h-2z"/></svg>'
 };
 
 
@@ -837,6 +845,59 @@ function weighInDue(){
   const d = daysSince(w[w.length-1].date);
   return d >= 7 ? {first:false, days:d} : null;
 }
+/* ---------- version, updates, sharing ---------- */
+// The version is the offline cache name the service worker uses ("training-v9" -> "v9").
+let appVersion = "";
+async function readVersion(){
+  try{ const ks = (await caches.keys()).map(k=>(/^training-v(\d+)$/.exec(k)||[])[1]).filter(Boolean).map(Number);
+    if(ks.length) appVersion = "v"+Math.max(...ks); }catch(_){}
+}
+const appUrl = () => location.origin + location.pathname.replace(/index\.html$/, "");
+let selfUpdating = false;
+// Returns "updating" (the page reloads into the new version), "latest", "offline" or "unsupported".
+async function checkForUpdate(){
+  if(!("serviceWorker" in navigator) || !("caches" in window)) return "unsupported";
+  if(navigator.onLine === false) return "offline";
+  const reg = await navigator.serviceWorker.getRegistration(); if(!reg) return "unsupported";
+  try{ await reg.update(); }catch(_){ return "offline"; }
+  const w = reg.installing || reg.waiting;
+  if(w){                                    // a new version is downloading: wait for it, then reload into it
+    await new Promise(res=>{ const done=()=>{ if(w.state==="activated" || w.state==="redundant") res(); }; w.addEventListener("statechange", done); done(); setTimeout(res, 60000); });
+    if(w.state==="activated"){ selfUpdating = true; location.reload(); return "updating"; }
+  }
+  // Same service worker: still make sure the app page itself is the newest one.
+  try{
+    const fresh = await fetch("index.html", {cache:"no-store"}); if(!fresh.ok) return "offline";
+    const text = await fresh.clone().text(), old = await caches.match("index.html");
+    if(old && text === await old.text()) return "latest";
+    const name = (await caches.keys()).find(k=>/^training-v\d+$/.test(k));
+    if(name){ const c = await caches.open(name); await c.put("index.html", fresh.clone()); await c.put("./", fresh.clone()); }
+    selfUpdating = true; location.reload(); return "updating";
+  }catch(_){ return "offline"; }
+}
+async function runUpdateCheck(){
+  const b = document.getElementById("bUpdate");
+  if(b){ b.disabled = true; b.textContent = "Checking…"; }
+  let r = "unsupported";
+  try{ r = await checkForUpdate(); }catch(_){}
+  if(r==="updating"){ if(b) b.textContent = "Loading the new version…"; return; }
+  if(b){ b.disabled = false; b.textContent = "Check for updates"; }
+  toast(r==="latest" ? `You have the latest version (${appVersion||"current"})` : r==="offline" ? "No internet. Try again when you're online" : "Can't check here. Reload the page to get the latest version");
+}
+async function shareAppSheet(){
+  if(!window.qrSVG) await new Promise(res=>{ const sc = document.createElement("script"); sc.src = "qr.js"; sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+  if(!window.qrSVG) return toast("Couldn't load the QR code. Try again online");
+  sheet = {type:"shareapp"}; render();
+}
+// A new version that installed in the background while the app was open: offer a one-tap reload.
+function showUpdateBar(){
+  if(document.getElementById("updateBar")) return;
+  const bar = document.createElement("div"); bar.id = "updateBar"; bar.className = "update-bar"; bar.setAttribute("role","status");
+  bar.innerHTML = `<span>A new version is ready.</span><button class="pill" type="button">Reload</button>`;
+  bar.querySelector("button").addEventListener("click", ()=>{ if(rest || hold) return toast("Finish this set first"); location.reload(); });
+  document.body.appendChild(bar);
+}
+
 /* ---------- keeping the data safe ---------- */
 // Ask the browser not to clear this app's storage on its own (granted for home-screen apps and frequently used sites).
 let storageState = "unknown";
@@ -1052,7 +1113,10 @@ function viewHistory(){
       <h2 class="sub">Backup</h2>
       <div class="srow"><button class="cta ghost half" data-act="export">Export all data</button><button class="cta ghost half" data-act="import">Import backup</button></div>
       <p class="fine">Your data is saved on this phone only. Export saves workouts, history, profile and weigh-ins in one file. Import shows what it will change and asks first. It only adds workouts and weigh-ins, it never deletes them.</p>
-      <p class="fine bkstat">${S.settings.lastExport ? `Last backup: ${esc(fmtDate(new Date(S.settings.lastExport).toISOString()))}.` : "No backup exported yet."} ${storageState==="protected" ? `<span class="good">Storage is protected from automatic clearing.</span>` : storageState==="not protected" ? "This browser may clear the data if the app isn't opened for a while. Add it to your Home Screen and export a backup now and then." : ""}</p></section>`;
+      <p class="fine bkstat">${S.settings.lastExport ? `Last backup: ${esc(fmtDate(new Date(S.settings.lastExport).toISOString()))}.` : "No backup exported yet."} ${storageState==="protected" ? `<span class="good">Storage is protected from automatic clearing.</span>` : storageState==="not protected" ? "This browser may clear the data if the app isn't opened for a while. Add it to your Home Screen and export a backup now and then." : ""}</p>
+      <h2 class="sub">App</h2>
+      <div class="srow"><button class="cta ghost half" data-act="chkupd" id="bUpdate">Check for updates</button><button class="cta ghost half shareapp" data-act="shareapp">${ICON.qr}Share app</button></div>
+      <p class="fine">${appVersion?`Version ${esc(appVersion)}. `:""}New versions also install on their own when you open the app online; Check for updates gets one right away.</p></section>`;
 }
 function viewBody(){
   const P = S.profile||{}, b = bodyStats();
@@ -1110,6 +1174,14 @@ function viewSheet(){
     const list=(S.plan?.nogym ? nogymExercises() : gymExercises()).filter(e=>!inPlan.has(e.id)&&(!q||e.name.toLowerCase().includes(q)));
     return wrap("Add exercise","Add exercise",`<input class="search" type="search" placeholder="Search" data-f="pq" value="${esc(sheet.q||"")}" aria-label="Search exercises">
       <div class="list">${list.map(e=>`<button class="row" data-act="addthis" data-id="${e.id}"><span class="nm">${esc(e.name)}<small>${GROUPS[e.group]}</small></span></button>`).join("")}</div>`);
+  }
+  if(sheet.type==="shareapp"){
+    const url = appUrl(), qr = window.qrSVG ? window.qrSVG(url, {label:"QR code with a link to the Training log app"}) : "";
+    return wrap("Share the app","Share the app", `<div class="qr-box">${qr}</div>
+      <p class="qr-hint">Scan it with another phone's camera. The Training log opens there; then add it to the Home Screen.</p>
+      <p class="qr-url">${esc(url)}</p>
+      ${navigator.share ? `<button class="cta wide" data-act="sendlink">Send link</button>` : ""}
+      <button class="cta ghost wide" data-act="copylink">Copy link</button>`);
   }
   if(sheet.type==="summary"){
     const sess = allSessions().find(x=>x.id===sheet.id); if(!sess) return "";
@@ -1295,6 +1367,10 @@ $app.addEventListener("click", e=>{
     case "histmore": histShown += 20; render(); break;
     case "weighin": sheet={type:"weighin"}; render(); setTimeout(()=>document.getElementById("wi-w")?.focus(),60); break;
     case "editwi": sheet={type:"weighin", id:b.dataset.id}; render(); break;
+    case "chkupd": runUpdateCheck(); break;
+    case "shareapp": shareAppSheet(); break;
+    case "sendlink": navigator.share({title:"Training log", text:"Training log: workouts, progress and body tracking", url:appUrl()}).catch(()=>{}); break;
+    case "copylink": { const url = appUrl(); (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(()=>toast("Link copied"), ()=>toast(url)); break; }
     case "bksnooze": S.settings.bkSnooze = Date.now()+3*864e5; persistSettings(); render(); break;
     case "wisnooze": S.settings.wiSnooze=ymd(new Date()); persistSettings(); render(); break;
     case "winotify": toggleNotify(); break;
@@ -1687,7 +1763,15 @@ const h = location.hash.slice(1); if(["today","exercises","history","body"].incl
 if(h==="weighin"){ tab="body"; sheet={type:"weighin"}; }
 render();
 window.addEventListener("hashchange", ()=>{ if(location.hash==="#weighin"){ focus=null; tab="body"; sheet={type:"weighin"}; render(false); } });
-if("serviceWorker" in navigator){ window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+if("serviceWorker" in navigator){
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ readVersion(); if(hadController && !selfUpdating) showUpdateBar(); });
+  window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").then(reg=>{
+    readVersion().then(()=>{ if(tab==="history" && !focus) render(); });
+    // An installed app is often just brought back from the background: look for a new version then.
+    document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
+  }).catch(()=>{}));
+}
 </script>
 </body>
 </html>

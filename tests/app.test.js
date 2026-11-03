@@ -208,6 +208,26 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- update and share
+  console.log("update and share");
+  for (const [w, h] of WIDTHS) {
+    const { ctx, page } = await open(browser, URL, baseSeed({}), { w, h });
+    await page.click('[data-tab="history"]');
+    check(`${w}px: Check for updates and Share app buttons`, !!(await page.$('[data-act="chkupd"]')) && !!(await page.$('[data-act="shareapp"]')));
+    await page.click('[data-act="shareapp"]');
+    await page.waitForSelector(".qr-box svg");
+    const qr = await page.evaluate(() => ({ url: document.querySelector(".qr-url").textContent, app: appUrl(), w: document.querySelector(".qr-box").getBoundingClientRect().width }));
+    check(`${w}px: share sheet shows a QR code for the app link`, qr.url === qr.app && qr.w >= 200, JSON.stringify(qr));
+    check(`${w}px: share sheet has no sideways scroll`, await noOverflow(page));
+    if (w === 375) {
+      await page.click(".sheet-h [data-act='close']");
+      await page.click('[data-act="chkupd"]');
+      check("update check answers without a service worker", /Reload the page|latest/.test((await page.textContent(".toast")) || ""));
+      check("QR encoder makes a valid 37x37 code for the app link", await page.evaluate(() => /viewBox="0 0 37 37"/.test(qrSVG("https://bagaljivko.github.io/Trening-app/"))));
+    }
+    await ctx.close();
+  }
+
   await browser.close(); srv.close();
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

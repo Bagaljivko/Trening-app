@@ -550,6 +550,7 @@ function saveLocal(){
   if(loadProblem) return false;                 // never write over data we couldn't read
   try{
     localStorage.setItem(LS_KEY, JSON.stringify(S));
+    if(drive.connected) scheduleDriveBackup();
     if(saveProblem){ saveProblem = null; setTimeout(()=>{ if(!focus) render(); }, 0); }
     return true;
   }catch(e){
@@ -1011,6 +1012,234 @@ function showUpdateBar(){
   document.body.appendChild(bar);
 }
 
+/* ---------- Google Drive backup ----------
+   Same Google sign-in setup as the Gitara app (both run on bagaljivko.github.io). It uses only the
+   drive.file permission: the app can see nothing in your Drive except the files it creates itself. */
+const DRIVE = {
+  CLIENT_ID: "633765324865-ki9jk8hvnt9cfqbsemipfl8f796g3s1v.apps.googleusercontent.com",
+  SCOPE: "https://www.googleapis.com/auth/drive.file",
+  GIS: "https://accounts.google.com/gsi/client",
+  API: "https://www.googleapis.com/drive/v3", UPLOAD: "https://www.googleapis.com/upload/drive/v3",
+  FOLDER: "Training log", FILE: "training-log-backup.json", KEY: "training-log-drive", DELAY: 4000,
+};
+const drive = {connected:false, email:"", folderId:"", backupId:"", lastBackup:0, pending:false, lastHash:"",
+  token:"", tokenExp:0, needsReconnect:false, busy:false, lastError:""};
+class DriveError extends Error { constructor(msg, code=""){ super(msg); this.code = code; } }
+function driveLoad(){ try{ Object.assign(drive, JSON.parse(localStorage.getItem(DRIVE.KEY) || "{}")); }catch(_){} drive.busy = false; }
+function driveSave(){ try{ const {busy, ...keep} = drive; localStorage.setItem(DRIVE.KEY, JSON.stringify(keep)); }catch(_){} }
+let driveRenderTimer = 0;
+function driveChanged(){ driveSave(); clearTimeout(driveRenderTimer); driveRenderTimer = setTimeout(()=>{ if(!focus && !sheet) render(); }, 50); }
+
+// One JSON format for the backup file, the Export button and Google Drive.
+function backupData(){
+  return {app:"training-log", version:2, exported:new Date().toISOString(),
+    sessions:S.sessions, plan:S.plan||null, custom:S.custom, settings:S.settings, sheet:S.sheet||null,
+    profile:S.profile||{}, weighins:S.weighins||[]};
+}
+// Changes worth a new Drive backup: everything except the workout in progress (so not on every set).
+function driveHash(){
+  const str = JSON.stringify({...backupData(), exported:0, plan:null});
+  let h = 5381; for(let i=0;i<str.length;i++) h = ((h<<5) + h + str.charCodeAt(i)) | 0;
+  return str.length + ":" + (h>>>0).toString(36);
+}
+
+let gisP = null, tokenClient = null, pendingToken = null;
+function loadGis(){
+  if(window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
+  if(navigator.onLine === false) return Promise.reject(new DriveError("No internet connection. Go online and try again.", "offline"));
+  if(!gisP) gisP = new Promise((res, rej)=>{
+    const sc = document.createElement("script"); sc.src = DRIVE.GIS; sc.async = true;
+    sc.onload = () => res(); sc.onerror = () => { gisP = null; sc.remove(); rej(new DriveError("Google sign-in can't load right now. Check your internet connection.", "offline")); };
+    document.head.appendChild(sc);
+  });
+  return gisP;
+}
+function getTokenClient(){
+  if(tokenClient) return tokenClient;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE.CLIENT_ID, scope: DRIVE.SCOPE,
+    callback: resp => {
+      const pt = pendingToken; pendingToken = null; if(!pt) return;
+      if(resp.error) return pt.reject(new DriveError(resp.error==="access_denied" ? "Access to Google Drive wasn't allowed." : "Google sign-in failed. Try again.", resp.error==="access_denied" ? "denied" : "auth"));
+      if(!google.accounts.oauth2.hasGrantedAllScopes(resp, DRIVE.SCOPE)) return pt.reject(new DriveError("Drive access wasn't allowed. Connect again and tick the Google Drive permission.", "denied"));
+      pt.resolve(resp);
+    },
+    error_callback: err => {
+      const pt = pendingToken; pendingToken = null; if(!pt) return;
+      if(err && err.type==="popup_closed") pt.reject(new DriveError("Sign-in was cancelled.", "cancelled"));
+      else if(err && err.type==="popup_failed_to_open") pt.reject(new DriveError("The Google sign-in window couldn't open. Allow pop-ups and try again.", "popup"));
+      else pt.reject(new DriveError("Google sign-in failed. Try again.", "auth"));
+    },
+  });
+  return tokenClient;
+}
+async function requestToken(interactive){
+  await loadGis();
+  const client = getTokenClient();
+  if(pendingToken) pendingToken.reject(new DriveError("Sign-in was cancelled.", "cancelled"));
+  const resp = await new Promise((res, rej)=>{
+    pendingToken = {resolve:res, reject:rej};
+    const opts = {prompt: interactive ? (drive.email ? "" : "select_account") : "none"};
+    if(drive.email) opts.login_hint = drive.email;
+    try{ client.requestAccessToken(opts); }catch(_){ pendingToken = null; rej(new DriveError("Google sign-in failed. Try again.", "auth")); }
+  });
+  drive.token = resp.access_token;
+  drive.tokenExp = Date.now() + (Number(resp.expires_in) || 3600)*1000 - 60000;
+  drive.needsReconnect = false; driveChanged();
+  return drive.token;
+}
+async function getToken(){
+  if(drive.token && Date.now() < drive.tokenExp) return drive.token;
+  try{ return await requestToken(false); }
+  catch(e){
+    if(e.code==="offline") throw e;
+    drive.token = ""; drive.needsReconnect = true; driveChanged();
+    throw new DriveError("The Google Drive connection expired. Tap Reconnect.", "reconnect");
+  }
+}
+async function driveApi(url, opts={}, retry=true){
+  if(navigator.onLine === false) throw new DriveError("No internet connection.", "offline");
+  const token = await getToken();
+  let res;
+  try{ res = await fetch(url, {...opts, headers:{...(opts.headers||{}), Authorization:"Bearer "+token}}); }
+  catch(_){ throw new DriveError("Can't reach Google Drive. Check your internet connection.", "offline"); }
+  if(res.status===401 && retry){ drive.token = ""; drive.tokenExp = 0; return driveApi(url, opts, false); }
+  if(!res.ok){
+    let msg = ""; try{ const j = await res.json(); msg = (j.error && j.error.message) || ""; }catch(_){}
+    if(res.status===401){ drive.needsReconnect = true; driveChanged(); throw new DriveError("The Google Drive connection expired. Tap Reconnect.", "reconnect"); }
+    if(res.status===403 && /storage|space/i.test(msg)) throw new DriveError("There isn't enough space on your Google Drive.", "storage");
+    if(res.status===403 && /rate|quota|limit/i.test(msg)) throw new DriveError("Google Drive is limiting access for a moment. Trying again later.", "rate");
+    if(res.status===403) throw new DriveError("Google Drive refused access. Disconnect and connect again.", "denied");
+    if(res.status===404) throw new DriveError("File not found on Google Drive.", "notfound");
+    throw new DriveError("Google Drive error"+(msg ? ": "+msg.slice(0,120) : "."), "http");
+  }
+  return res;
+}
+const driveQ = s => s.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+async function driveFind(q){
+  const url = `${DRIVE.API}/files?spaces=drive&pageSize=10&orderBy=modifiedTime desc&fields=${encodeURIComponent("files(id,name,modifiedTime)")}&q=${encodeURIComponent(q)}`;
+  return (await (await driveApi(url)).json()).files || [];
+}
+async function driveFolder(){
+  if(drive.folderId){
+    try{ const f = await (await driveApi(`${DRIVE.API}/files/${drive.folderId}?fields=id,trashed`)).json(); if(!f.trashed) return drive.folderId; }
+    catch(e){ if(e.code!=="notfound") throw e; }
+  }
+  const found = await driveFind(`name='${driveQ(DRIVE.FOLDER)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  if(found.length) drive.folderId = found[0].id;
+  else drive.folderId = (await (await driveApi(`${DRIVE.API}/files?fields=id`, {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({name:DRIVE.FOLDER, mimeType:"application/vnd.google-apps.folder"})})).json()).id;
+  drive.backupId = ""; driveSave();
+  return drive.folderId;
+}
+async function driveFindBackup(){
+  const folder = await driveFolder();
+  const files = await driveFind(`name='${driveQ(DRIVE.FILE)}' and '${folder}' in parents and trashed=false`);
+  drive.backupId = files.length ? files[0].id : "";
+  return files[0] || null;
+}
+async function driveUpload(id, text, folder){
+  const meta = {name:DRIVE.FILE, mimeType:"application/json"}; if(!id) meta.parents = [folder];
+  const boundary = "training" + Math.random().toString(36).slice(2);
+  const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n`,
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n`, text, `\r\n--${boundary}--`]);
+  const url = id ? `${DRIVE.UPLOAD}/files/${id}?uploadType=multipart&fields=id,modifiedTime` : `${DRIVE.UPLOAD}/files?uploadType=multipart&fields=id,modifiedTime`;
+  return (await driveApi(url, {method: id ? "PATCH" : "POST", headers:{"Content-Type":`multipart/related; boundary=${boundary}`}, body})).json();
+}
+async function driveBackupNow(){
+  if(!drive.connected) throw new DriveError("Google Drive isn't connected.", "notconnected");
+  drive.busy = true; driveChanged();
+  try{
+    const hash = driveHash(), text = JSON.stringify(backupData());
+    const folder = await driveFolder();
+    if(!drive.backupId) await driveFindBackup();
+    let r;
+    try{ r = await driveUpload(drive.backupId, text, folder); }
+    catch(e){ if(e.code!=="notfound") throw e; drive.backupId = ""; r = await driveUpload("", text, folder); }
+    drive.backupId = r.id; drive.lastBackup = Date.parse(r.modifiedTime) || Date.now();
+    drive.lastHash = hash; drive.pending = false; drive.lastError = "";
+    return drive.lastBackup;
+  }finally{ drive.busy = false; driveChanged(); }
+}
+async function driveReadBackup(){
+  const f = await driveFindBackup(); if(!f) return null;
+  const res = await driveApi(`${DRIVE.API}/files/${f.id}?alt=media`);
+  let data; try{ data = await res.json(); }catch(_){ throw new DriveError("The backup on Google Drive is damaged.", "format"); }
+  if(!data || data.app!=="training-log" || !Array.isArray(data.sessions)) throw new DriveError("The file on Google Drive isn't a Training log backup.", "format");
+  data.exported = data.exported || f.modifiedTime;
+  return data;
+}
+
+let driveTimer = 0, driveRetry = 30000;
+function scheduleDriveBackup(delay=DRIVE.DELAY){
+  if(!drive.connected || loadProblem) return;
+  if(!drive.pending){ if(driveHash()===drive.lastHash) return; drive.pending = true; driveChanged(); }
+  clearTimeout(driveTimer); driveTimer = setTimeout(runDriveBackup, delay);
+}
+async function runDriveBackup(){
+  if(!drive.connected || !drive.pending) return;
+  if(navigator.onLine === false){ drive.lastError = "Waiting for an internet connection…"; driveChanged(); return; }
+  if(drive.busy){ scheduleDriveBackup(2000); return; }
+  try{ await driveBackupNow(); driveRetry = 30000; }
+  catch(e){
+    drive.lastError = e instanceof DriveError ? e.message : "The backup failed."; driveChanged();
+    if(["reconnect","denied","storage","notconnected"].includes(e.code)) return;      // waits for you
+    clearTimeout(driveTimer); driveTimer = setTimeout(runDriveBackup, driveRetry); driveRetry = Math.min(driveRetry*2, 15*60000);
+  }
+}
+async function driveConnect(){
+  const b = document.querySelector('[data-act="driveconnect"]'); if(b){ b.disabled = true; b.textContent = "Connecting…"; }
+  try{
+    await requestToken(true);
+    const about = await (await driveApi(`${DRIVE.API}/about?fields=user(emailAddress)`)).json();
+    drive.email = (about.user && about.user.emailAddress) || ""; drive.connected = true; drive.needsReconnect = false; drive.lastError = "";
+    await driveFolder(); driveChanged();
+    const existing = await driveFindBackup();
+    if(existing && !S.sessions.length){                // empty phone + a backup on Drive: offer to bring it back
+      const data = await driveReadBackup();
+      if(data){ sheet = {type:"restore", data, file:"Your Google Drive backup"}; render(); return; }
+    }
+    await driveBackupNow(); toast("Google Drive connected. Backup saved");
+  }catch(e){ toast(e instanceof DriveError ? e.message : "Connecting failed. Try again"); driveChanged(); }
+}
+async function driveReconnect(){
+  try{ await requestToken(true); toast("Google Drive reconnected"); if(drive.pending) scheduleDriveBackup(500); else scheduleDriveBackup(500); }
+  catch(e){ toast(e instanceof DriveError ? e.message : "Reconnecting failed. Try again"); }
+}
+async function driveRestore(){
+  try{
+    const data = await driveReadBackup();
+    if(!data) return toast("There's no backup on Google Drive yet");
+    sheet = {type:"restore", data, file:"Your Google Drive backup"}; render();
+  }catch(e){ toast(e instanceof DriveError ? e.message : "Restore failed. Try again"); }
+}
+function driveDisconnect(){
+  if(!confirm("Stop backing up to Google Drive? The backup already on your Drive stays there.")) return;
+  const t = drive.token;
+  Object.assign(drive, {connected:false, email:"", folderId:"", backupId:"", lastBackup:0, pending:false, lastHash:"", token:"", tokenExp:0, needsReconnect:false, lastError:""});
+  clearTimeout(driveTimer); driveChanged();
+  if(t && window.google && google.accounts && google.accounts.oauth2){ try{ google.accounts.oauth2.revoke(t, ()=>{}); }catch(_){} }
+  toast("Google Drive disconnected");
+}
+function driveBanner(){
+  if(!drive.connected || !drive.needsReconnect) return "";
+  return `<div class="banner bk" role="alert"><p>Google Drive backup is paused<small>The connection expired. Reconnect to keep your workouts backed up.</small></p>
+    <span class="b-acts"><button class="pill" data-act="drivereconnect">Reconnect</button></span></div>`;
+}
+function driveSection(){
+  const when = t => new Date(t).toLocaleString(undefined,{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  if(!drive.connected) return `<h2 class="sub">Google Drive</h2>
+      <p class="fine">Back up automatically to a “${DRIVE.FOLDER}” folder in your Google Drive, a few seconds after every finished workout, weigh-in or settings change. The app can only see the files it creates there.</p>
+      <div class="srow"><button class="cta ghost half" data-act="driveconnect">Connect Google Drive</button></div>`;
+  const status = drive.needsReconnect ? `<span class="danger">The connection expired. Tap Reconnect.</span>`
+    : drive.busy ? "Backing up…" : drive.lastError ? esc(drive.lastError) : drive.pending ? "Changes are waiting to be backed up…"
+    : drive.lastBackup ? `Last backup: ${esc(when(drive.lastBackup))}` : "No backup yet.";
+  return `<h2 class="sub">Google Drive</h2>
+      <p class="fine">Connected: <b>${esc(drive.email || "Google account")}</b><br>${status}</p>
+      <div class="srow">${drive.needsReconnect ? `<button class="cta ghost half" data-act="drivereconnect">Reconnect</button>` : `<button class="cta ghost half" data-act="drivenow">Back up now</button>`}<button class="cta ghost half" data-act="driverestore">Restore from Drive</button></div>
+      <button class="link danger" style="margin-top:12px" data-act="drivedisconnect">Disconnect Google Drive</button>`;
+}
+
 /* ---------- keeping the data safe ---------- */
 // Ask the browser not to clear this app's storage on its own (granted for home-screen apps and frequently used sites).
 let storageState = "unknown";
@@ -1036,6 +1265,7 @@ function downloadText(name, text){
 function backupDue(){
   const n = S.sessions.length, st = S.settings;
   if(n < 3 || (st.bkSnooze && Date.now() < st.bkSnooze)) return null;
+  if(drive.connected && !drive.needsReconnect && drive.lastBackup) return null;     // Google Drive keeps it backed up
   if(!st.lastExport) return {never:true, n};
   const days = Math.floor((Date.now()-st.lastExport)/864e5), since = n - (st.lastExportCount||0);
   return days >= 14 && since > 0 ? {never:false, days, since} : null;
@@ -1088,7 +1318,7 @@ function heroBlock(){
 function itemState(it){ const d=it.sets.filter(s=>s.done).length; return {d, n:it.sets.length, all:d===it.sets.length}; }
 function viewToday(){
   const num = S.sessions.length + 1;
-  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>` + (dataBanner() || backupBanner() || weighBanner());
+  const head = `<header class="pad"><div class="eyebrow">${esc(longDate())}</div><h1>Workout ${num}</h1></header>` + (dataBanner() || driveBanner() || backupBanner() || weighBanner());
   if(!S.plan || !S.plan.items.length){
     const last = allSessions().slice(-1)[0];
     const rec = muscleNames(recentMuscles());
@@ -1238,7 +1468,8 @@ function viewHistory(){
       <h2 class="sub">Backup</h2>
       <div class="srow"><button class="cta ghost half" data-act="export">Export all data</button><button class="cta ghost half" data-act="import">Import backup</button></div>
       <p class="fine">Your data is saved on this phone only. Export saves workouts, history, profile and weigh-ins in one file. Import shows what it will change and asks first. It only adds workouts and weigh-ins, it never deletes them.</p>
-      <p class="fine bkstat">${S.settings.lastExport ? `Last backup: ${esc(fmtDate(new Date(S.settings.lastExport).toISOString()))}.` : "No backup exported yet."} ${storageState==="protected" ? `<span class="good">Storage is protected from automatic clearing.</span>` : storageState==="not protected" ? "This browser may clear the data if the app isn't opened for a while. Add it to your Home Screen and export a backup now and then." : ""}</p>
+      <p class="fine bkstat">${S.settings.lastExport ? `Last exported file: ${esc(fmtDate(new Date(S.settings.lastExport).toISOString()))}.` : drive.connected ? "" : "No backup exported yet."}${drive.connected && drive.lastBackup ? ` <span class="good">Backed up automatically to Google Drive.</span>` : ""} ${storageState==="protected" ? `<span class="good">Storage is protected from automatic clearing.</span>` : storageState==="not protected" ? "This browser may clear the data if the app isn't opened for a while. Add it to your Home Screen and export a backup now and then." : ""}</p>
+      ${driveSection()}
       <div class="srow col"><span>Safety copies</span><p class="fine" style="margin-top:4px">${snapInfo.n ? `${snapInfo.n} on this phone, newest ${esc(new Date(snapInfo.newest).toLocaleString(undefined,{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))}. The app saves one every day and before updates or restores.` : "The app saves a copy of your data every day and before updates or restores."}</p>
         ${snapInfo.n ? `<button class="link" style="align-self:flex-start;margin-top:8px" data-act="snapshots">Restore a safety copy</button>` : ""}</div>
       <h2 class="sub">App</h2>
@@ -1507,6 +1738,11 @@ $app.addEventListener("click", e=>{
     case "sendlink": navigator.share({title:"Training log", text:"Training log: workouts, progress and body tracking", url:appUrl()}).catch(()=>{}); break;
     case "copylink": { const url = appUrl(); (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(()=>toast("Link copied"), ()=>toast(url)); break; }
     case "snapshots": openSnapshots(); break;
+    case "driveconnect": driveConnect(); break;
+    case "drivereconnect": driveReconnect(); break;
+    case "drivenow": driveBackupNow().then(()=>toast("Backup saved to Google Drive"), e=>toast(e instanceof DriveError ? e.message : "The backup failed")); break;
+    case "driverestore": driveRestore(); break;
+    case "drivedisconnect": driveDisconnect(); break;
     case "usesnap": useSnapshot(+b.dataset.id); break;
     case "dlraw": if(loadProblem) downloadText("training-unreadable-"+new Date().toISOString().slice(0,10)+".json", loadProblem.raw); break;
     case "freshstart": if(loadProblem && confirm("Start with empty data? The unreadable data stays saved on this phone as a separate copy, and you can still download it from here first.")){
@@ -1560,9 +1796,7 @@ function finish(fromDone=false){
   return s;
 }
 async function exportBackup(){
-  const data = JSON.stringify({app:"training-log",version:2,exported:new Date().toISOString(),
-    sessions:S.sessions,plan:S.plan||null,custom:S.custom,settings:S.settings,sheet:S.sheet||null,
-    profile:S.profile||{},weighins:S.weighins||[]},null,1);
+  const data = JSON.stringify(backupData(),null,1);
   const name = "training-backup-"+new Date().toISOString().slice(0,10)+".json";
   try{
     const file = new File([data], name, {type:"application/json"});
@@ -1900,7 +2134,10 @@ protectStorage();
 // iOS Safari ignores user-scalable=no, so block its pinch-zoom gesture events too.
 ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t, e=>e.preventDefault(), {passive:false}));
 loadLocal();
+driveLoad();
 upgradeData();
+if(drive.connected){ if(drive.pending) scheduleDriveBackup(3000); else scheduleDriveBackup(); }
+window.addEventListener("online", ()=>{ if(drive.connected && drive.pending) scheduleDriveBackup(1500); });
 dailySnapshot().then(()=>{ if(!focus && (tab==="history" || loadProblem)) render(); });
 const h = location.hash.slice(1); if(["today","exercises","history","body"].includes(h)) tab=h;
 if(h==="weighin"){ tab="body"; sheet={type:"weighin"}; }

@@ -800,13 +800,58 @@ function fillIll(el){
 }
 // List thumbnails ("lazy") are only drawn when they come near the screen.
 const illObserver = "IntersectionObserver" in window ? new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting){ illObserver.unobserve(en.target); fillIll(en.target); } }), {rootMargin:"400px 0px"}) : null;
+/* Plays the keyframes stored in an animated picture. The files keep standard SVG <animate> elements;
+   here they are read once, removed, and played with requestAnimationFrame, so the motion is the same on
+   every browser, always starts from the static pose, stops as soon as the picture leaves the screen and
+   pauses while the app is in the background. One shared clock keeps it smooth across redraws. */
+let animT0 = 0;
+const NUM = /-?\d*\.?\d+/g;
+function playAnim(el){
+  const svg = el.querySelector("svg"); if(!svg || el._anim) return;
+  const tracks = [...svg.querySelectorAll("animate")].map(a=>{
+    const vals = (a.getAttribute("values")||"").split(";"), tr = {tgt:a.parentElement, name:a.getAttribute("attributeName"),
+      dur:(parseFloat(a.getAttribute("dur"))||2)*1000, n:vals.map(v=>(v.match(NUM)||[]).map(Number)), tpl:vals[0].split(NUM)};
+    a.remove(); return tr; }).filter(tr=>tr.n.length>1 && tr.n.every(x=>x.length===tr.n[0].length));
+  if(!tracks.length) return;
+  el._anim = true;
+  if(!animT0) animT0 = performance.now();
+  const step = now=>{
+    if(!el.isConnected) return;                                  // collapsed or redrawn: stop
+    for(const tr of tracks){
+      const k = tr.n.length-1, x = (((now-animT0) % tr.dur) + tr.dur) % tr.dur / tr.dur * k, i = Math.min(k-1, Math.floor(x)), f = x-i, a = tr.n[i], b = tr.n[i+1];
+      let s = tr.tpl[0];
+      for(let j=0; j<a.length; j++) s += Math.round((a[j]+(b[j]-a[j])*f)*10)/10 + tr.tpl[j+1];
+      tr.tgt.setAttribute(tr.name, s);
+    }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 function hydrateIll(){
+  document.querySelectorAll(".ill[data-anim]").forEach(el=>{
+    if(el._anim) return;
+    if(el.dataset.animOn){ playAnim(el); return; }
+    el.dataset.animOn = "1";
+    loadIll(el.dataset.anim).then(svg=>{ if(svg && el.isConnected){ el.innerHTML = svg; playAnim(el); } });
+  });
   document.querySelectorAll(".ill[data-ill]").forEach(el=>{
     if(el.firstElementChild) return;
     if(illObserver && el.classList.contains("lazy")) illObserver.observe(el); else fillIll(el);
   });
 }
 const picHTML = e => `<div class="fpic">${illHTML(e, "", e.name)}</div>`;
+/* Animated pictures: only on the exercise screen while its explanation is expanded ("Show more"),
+   and never with "reduce motion". The animated file (images/anim/) loops the movement with SVG
+   <animate>; collapsing puts the static picture back, so nothing moves anywhere else. */
+const motionOK = () => !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+const animOf = e => { const u = imgOf(e); return /new-exercise\.svg$/.test(u) || (e && STMAP[e.id]) ? "" : u.replace("images/", "images/anim/"); };
+function picAnimHTML(e){
+  const a = motionOK() ? animOf(e) : "";
+  if(!a) return picHTML(e);
+  const url = imgOf(e), ready = svgCache.get(a);
+  // until the animated file has loaded, the static picture shows in its place
+  return `<div class="fpic"><span class="ill" data-ill="${url}" data-anim="${a}"${ready?' data-anim-on="1"':""}>${ready || svgCache.get(url) || ""}</span></div>`;
+}
 function gymExercises(){ return SEED.ex.map(exObj).concat(S.custom); }
 function nogymExercises(){ return NOGYM.map(ngObj); }
 function allExercises(){ return gymExercises().concat(nogymExercises()); }
@@ -1631,7 +1676,7 @@ function viewFocus(){
     <div class="fbody">
       <div class="grp">${gName(e.group)||""}${e.nogym?` · <span class="ngtag">${tr("No gym")}</span>`:""}</div>
       <h2 class="fname">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge">${tr("New PR")}</span>`:""}</h2>
-      ${picHTML(e)}
+      ${howOpen ? picAnimHTML(e) : picHTML(e)}
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(exDesc(e))}</p><button class="link more" data-act="howtoggle">${howOpen?tr("Show less"):tr("Show more")}</button>`:""}
       ${noteHTML(it.ex)}
       ${upNext}
@@ -2051,7 +2096,7 @@ $app.addEventListener("click", e=>{
     case "back": focus=null; render(false); window.scrollTo(0,0); break;
     case "jump": focus.i=i; focus.edit=false; selSet=null; howOpen=false; render(false); window.scrollTo(0,0); break;
     case "sel": selSet=j; focus.edit=true; render(); break;
-    case "howtoggle": howOpen=!howOpen; render(); break;
+    case "howtoggle": howOpen=!howOpen; animT0 = 0; render(); break;
     case "nudge": {
       const s=S.plan.items[focus.i].sets[selSet], f=b.dataset.f, d=+b.dataset.d;
       if(f==="w" && isTimed(S.plan.items[focus.i].ex)){ s.w = Math.max(5,(+s.w||30)+d*5); }

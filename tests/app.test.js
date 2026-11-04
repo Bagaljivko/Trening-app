@@ -446,6 +446,36 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- animated exercise pictures
+  console.log("animated exercise pictures");
+  {
+    const { ctx, page } = await open(browser, URL, baseSeed({ plan: { created: "", v: 2, items: [{ ex: 39, sets: [{ w: 80, r: 5, done: false }] }] } }), { mobile: true });
+    const files = await page.evaluate(async () => {
+      const ex = allExercises().filter(e => typeof e.id === "number" || NGMAP[e.id]);
+      let ok = 0; const bad = [];
+      for (const e of ex) { const a = await (await fetch(animOf(e))).text(), s = await (await fetch(imgOf(e))).text();
+        if (/<animate /.test(a) && !/<animate /.test(s) && a.includes(e.name.replace(/&/g, "&amp;"))) ok++; else bad.push(e.name); }
+      return { n: ex.length, ok, bad };
+    });
+    check("every exercise has an animated picture and an unchanged static one", files.ok === files.n && files.n >= 140, JSON.stringify(files.bad));
+    await page.click('[data-act="open"][data-i="0"]');
+    check("collapsed: the static picture, nothing moves", !(await page.$(".fpic .ill[data-anim]")) && !(await page.$(".fpic svg animate")));
+    await page.click('[data-act="howtoggle"]'); await page.waitForTimeout(400);
+    const poses = await page.evaluate(async () => { const s = document.querySelector(".fpic svg"), seen = new Set(); for (let k = 0; k < 5; k++) { seen.add(s.innerHTML); await new Promise(r => setTimeout(r, 170)); } return seen.size; });
+    check("expanded: the picture animates", poses >= 3, poses + " poses");
+    await page.click('[data-act="howtoggle"]'); await page.waitForTimeout(200);
+    const still = await page.evaluate(async () => { const a = document.querySelector(".fpic svg").innerHTML; await new Promise(r => setTimeout(r, 400)); return a === document.querySelector(".fpic svg").innerHTML && !document.querySelector(".fpic .ill")._anim; });
+    check("collapsed again: it stops and the static picture is back", still);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.click('[data-act="howtoggle"]'); await page.waitForTimeout(300);
+    check("reduce motion: the static picture stays", !(await page.$(".fpic .ill[data-anim]")) && !(await page.evaluate(() => (document.querySelector(".fpic .ill") || {})._anim)));
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.click('[data-act="back"]'); await page.click('[data-tab="exercises"]'); await page.click('[data-act="detail"][data-id="39"]'); await page.waitForTimeout(300);
+    check("no motion anywhere else (lists, exercise sheet)", !(await page.$("svg animate")) && !(await page.$(".ill[data-anim]")));
+    check("animated pictures: no page errors", page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- backup
   console.log("backup and restore");
   {

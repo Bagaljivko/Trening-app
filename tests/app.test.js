@@ -305,6 +305,45 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- full-screen rest alert
+  console.log("full-screen rest alert");
+  for (const [w, h] of WIDTHS) {
+    const { ctx, page } = await open(browser, URL, baseSeed({ plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 70, r: 8, done: false }, { w: 70, r: 8, done: false }] }, { ex: 7, sets: [{ w: 30, r: "", done: false }] }] } }), { mobile: true, w, h });
+    await page.evaluate(() => { S.settings.mute = false; window.__dings = 0; ding = () => { window.__dings++; }; });
+    await page.click('[data-act="open"][data-i="0"]'); await page.click('#ctaBox [data-act="done"]');
+    check(`${w}px: no alert while more than 10 s of rest are left`, !(await page.$(".rov-bg")));
+    await page.evaluate(() => { rest.end = Date.now() + 8000; }); await page.waitForTimeout(400);
+    check(`${w}px: last 10 s of rest show full screen with the next set`, !!(await page.$(".rov-bg")) && /Set 2 of 2/.test(await page.textContent(".rov")) && /Start set 2/.test(await page.textContent(".rov-go")));
+    check(`${w}px: rest alert fits the screen`, await page.evaluate(() => { const o = document.querySelector(".rov"), b = o.getBoundingClientRect().bottom; return [...o.children].every(c => c.getBoundingClientRect().bottom <= b + 1); }) && await noOverflow(page));
+    await page.click(".rov-30"); await page.waitForTimeout(250);
+    check(`${w}px: +30 s adds time and hides the alert until the last 10 s`, !(await page.$(".rov-bg")) && await page.evaluate(() => rest.end - Date.now() > 30000));
+    await page.evaluate(() => { rest.end = Date.now() - 50; }); await page.waitForTimeout(500);
+    await page.evaluate(() => { rest.beep = 0; }); await page.waitForTimeout(400);
+    const d = await page.evaluate(() => window.__dings);
+    check(`${w}px: when rest is over it keeps beeping until you start`, !!(await page.$(".rov-bg.over")) && d >= 2, d + " beeps");
+    await page.evaluate(() => { rest.beep = Date.now() - 6000; rest.end = Date.now() - 130000; window.__dings = 0; }); await page.waitForTimeout(400);
+    check(`${w}px: the alert goes quiet after 2 minutes`, (await page.evaluate(() => window.__dings)) === 0);
+    await page.click(".rov-go"); await page.waitForTimeout(250);
+    check(`${w}px: Start set stops the alert and opens that set without logging it`, !(await page.$(".rov-bg")) && await page.evaluate(() => rest === null && focus.i === 0 && selSet === 1 && S.plan.items[0].sets[1].done === false));
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(browser, URL, baseSeed({ plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 70, r: 8, done: false }] }, { ex: 7, sets: [{ w: 30, r: "", done: false }] }] } }), { mobile: true });
+    await page.click('[data-act="open"][data-i="0"]'); await page.click('#ctaBox [data-act="done"]');
+    await page.click('[data-act="back"]'); await page.click('[data-tab="history"]');
+    await page.evaluate(() => { rest.end = Date.now() - 50; }); await page.waitForTimeout(500);
+    check("the alert shows on any tab and names the next exercise", !!(await page.$(".rov-bg")) && /Next exercise/.test(await page.textContent(".rov")) && /Start hold/.test(await page.textContent(".rov-go")));
+    await page.goBack(); await page.waitForTimeout(250);
+    check("Back closes the alert and goes to the next exercise", !(await page.$(".rov-bg")) && await page.evaluate(() => rest === null && focus && focus.i === 1));
+    await page.click('[data-act="back"]'); await page.click('[data-act="settings"]'); await page.click('[data-act="restalert"]');
+    check("the full-screen alert can be switched off in Settings", (await stored(page)).settings.restAlert === false);
+    await page.click('[data-act="setclose"]'); await page.evaluate(() => openFocus(1));
+    await page.evaluate(() => { startRest(60000, 1); rest.end = Date.now() + 5000; }); await page.waitForTimeout(400);
+    check("with the switch off, no full-screen alert", !(await page.$(".rov-bg")));
+    check("rest alert: no page errors", page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- backup
   console.log("backup and restore");
   {

@@ -251,26 +251,28 @@ body.holding{overflow:hidden}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 /* full-screen rest alert (last 10 s of rest, then until you start the set) */
 .rov-bg{z-index:48}
-/* layout from top to bottom: label · countdown · what to load next · two big buttons in thumb reach */
-.rov{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;justify-content:stretch;justify-items:center;align-items:center;gap:clamp(10px,2vh,18px);padding:16px 16px 16px}
-.rov-h{font-size:clamp(18px,5.4vw,24px);font-weight:700;letter-spacing:-.02em;color:var(--neon-txt);text-align:center;padding-top:6px}
-.rov-ring{width:min(64vw,38vh,300px)}
-.rov-ring .prog{stroke:var(--neon);filter:var(--glow)}
-.rov-t{font-size:clamp(64px,min(20vw,11vh),96px);font-weight:300;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;color:var(--neon-txt)}
-.rov-go-t{font-size:clamp(40px,min(14vw,8vh),64px);font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--neon-txt)}
-.rov-bg.over .rov-ring{animation:rovpulse 1.2s ease-in-out infinite}
-@keyframes rovpulse{50%{transform:scale(1.04)}}
-.rov-next{justify-self:stretch;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px;padding:12px 16px;border-radius:20px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line)}
-.rov-next .rov-pic{width:64px;height:52px}
+/* calm layout: label · timer with a small +30 s pill under it · what's next · one main button */
+.rov{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;justify-content:stretch;justify-items:center;align-items:center;gap:clamp(12px,2.4vh,22px);padding:18px 20px 20px}
+.rov-h{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);text-align:center;padding-top:8px}
+.rov-bg.over .rov-h{color:var(--neon-txt)}
+.rov-mid{display:flex;flex-direction:column;align-items:center;gap:clamp(10px,1.8vh,16px);min-height:0}
+.rov-ring{width:min(56vw,32vh,240px)}
+.rov-ring svg{overflow:visible}
+.rov-ring .trk{stroke-width:8}
+.rov-ring .prog{stroke:var(--neon);stroke-width:8;filter:var(--glow)}
+.rov-t{font-size:clamp(56px,min(17vw,9.5vh),84px);font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.rov-go-t{font-size:clamp(36px,min(12vw,7vh),54px);font-weight:600;letter-spacing:-.03em;line-height:1;color:var(--neon-txt)}
+.rov-bg.over .rov-ring{animation:rovpulse 1.4s ease-in-out infinite}
+@keyframes rovpulse{50%{transform:scale(1.03)}}
+.rov-30{height:36px;padding:0 18px;border-radius:18px;border:1px solid var(--line);font-size:14px;font-weight:600;color:var(--ink);background:transparent}
+.rov-next{justify-self:stretch;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px;padding:12px 14px;border-radius:18px;border:1px solid var(--line)}
+.rov-next .rov-pic{width:56px;height:44px}
 .rov-next .rov-pic .ill{width:100%;height:100%}
 .rov-next .rov-txt{min-width:0}
-.rov-next .rov-k{display:block;font-size:12.5px;color:var(--mut);font-weight:600}
-.rov-next b{display:block;font-size:17px;line-height:1.25;overflow-wrap:anywhere}
-.rov-next .rov-w{display:block;font-size:clamp(22px,7vw,28px);font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--ink);font-variant-numeric:tabular-nums}
-.rov-btns{justify-self:stretch;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:10px}
-.rov-btns .cta{height:clamp(64px,10vh,84px);border-radius:22px;font-size:clamp(18px,5.4vw,22px)}
-.rov-btns .cta.ghost{border-color:var(--ink)}
-.rov .cta.rov-go{background:var(--neon);color:var(--neon-ink)}
+.rov-next .rov-k{display:block;font-size:12px;color:var(--mut);font-weight:500}
+.rov-next b{display:block;font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.rov-next .rov-w{display:block;font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.2;font-variant-numeric:tabular-nums}
+.rov .cta.rov-go{justify-self:stretch}
 @media (prefers-reduced-motion:reduce){.rov-bg.over .rov-ring{animation:none}}
 .sm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
 .sm-grid div{border-radius:18px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);padding:12px 14px;min-width:0}
@@ -2301,12 +2303,13 @@ function restOverlay(){
   const head = tg.next ? tr("Next exercise") : `${tr("Set")} ${tg.j+1} ${tr("of {n}", {n:it.sets.length})}`;
   return `<div class="hov-bg rov-bg${rest.over?" over":""}"><div class="hov rov" role="alertdialog" aria-modal="true" aria-label="${rest.over?tr("Rest is over"):tr("Rest")}">
     <div class="rov-h">${rest.over ? (tg.next?tr("Time for the next exercise"):tr("Time for set {n}", {n:tg.j+1})) : tr("Rest")}</div>
-    <div class="hov-ring rov-ring" role="timer">
+    <div class="rov-mid"><div class="hov-ring rov-ring" role="timer">
       <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="trk" cx="100" cy="100" r="88"/><circle class="prog" id="rovRing" cx="100" cy="100" r="88" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${rest.over ? 0 : (C*(1-Math.min(1,left/ALERT_AT))).toFixed(1)}" transform="rotate(-90 100 100)"/></svg>
       <div class="hov-c">${rest.over ? `<div class="rov-go-t">${tr("Go")}</div><div class="hov-of" id="rovOver">${tr("Over by {t}", {t:fmtT(Date.now()-rest.end)})}</div>` : `<div class="rov-t" id="rovT">${Math.ceil(left/1000)}</div><div class="hov-of">${tr("seconds left")}</div>`}</div>
     </div>
+    <button class="rov-30" data-act="rest30">+30 s</button></div>
     <div class="rov-next"><div class="rov-pic">${illHTML(e)}</div><div class="rov-txt"><span class="rov-k">${head}</span><b>${esc(e.name)}</b><span class="rov-w">${esc(what)}</span></div></div>
-    <div class="rov-btns"><button class="cta ghost rov-30" data-act="rest30">+30 s</button><button class="cta rov-go" data-act="reststart">${go}</button></div>
+    <button class="cta rov-go" data-act="reststart">${go}</button>
   </div></div>`;
 }
 // Start set: stop the alert and go to that set (never logs anything).

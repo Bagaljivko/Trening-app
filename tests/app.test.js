@@ -298,6 +298,11 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     }
     await page.click('[data-tab="today"]'); await page.click('[data-act="open"][data-i="0"]');
     check("Serbian exercise screen", /Gotovo, serija 1/.test(await page.textContent("#ctaBox")) && await noOverflow(page));
+    await page.evaluate(() => { S.plan.items.forEach((it, n) => it.sets.forEach((x, k) => { x.done = !(n === S.plan.items.length - 1 && k === it.sets.length - 1); })); focus.i = S.plan.items.length - 1; selSet = null; persistPlan(); render(); });
+    await page.click('#ctaBox [data-act="done"]'); await page.waitForTimeout(200);
+    check("in Serbian the last set also saves the workout", await page.evaluate(() => S.plan === null && S.sessions.length === 7));
+    await page.evaluate(() => undoLast()); await page.waitForTimeout(200);
+    check("undo brings the workout back", await page.evaluate(() => !!S.plan && S.sessions.length === 6 && !!focus));
     await page.click('[data-act="back"]'); await page.click('[data-act="settings"]'); await page.click('[data-act="lang"][data-v="en"]');
     check("switching back to English works", /Settings/.test(await page.textContent("h1")) && (await stored(page)).settings.lang === "en");
     check("switching language never changes the workouts", JSON.stringify((await stored(page)).sessions) === before);
@@ -341,6 +346,45 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await page.evaluate(() => { startRest(60000, 1); rest.end = Date.now() + 5000; }); await page.waitForTimeout(400);
     check("with the switch off, no full-screen alert", !(await page.$(".rov-bg")));
     check("rest alert: no page errors", page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------- adding an exercise mid-workout
+  console.log("adding an exercise mid-workout");
+  {
+    const hist = [];
+    for (let k = 0; k < 4; k++) hist.push({ id: "h" + k, date: day(40 - k * 5), v: 2, items: [{ ex: 1, sets: [{ w: 100, r: 5 }] }] });
+    hist.push({ id: "hc", date: day(1), v: 2, items: [{ ex: 0, sets: [{ w: 70, r: 8 }] }] });
+    const plan = { created: "", v: 2, items: [{ ex: 9, sets: [{ w: 12, r: 10, done: true }, { w: 12, r: 10, done: false }] }, { ex: 3, sets: [{ w: 20, r: 10, done: false }] }] };
+    for (const [w, h] of WIDTHS) {
+      const { ctx, page } = await open(browser, URL, baseSeed({ sessions: hist, plan }), { mobile: true, w, h });
+      await page.click('[data-act="open"][data-i="0"]');
+      await page.click(".ftop .fadd");
+      check(`${w}px: + on the exercise screen opens the muscle groups`, (await page.$$(".pg")).length === 7 && !!(await page.$(".pg.hl")));
+      check(`${w}px: groups show when they were last trained`, /trained yesterday/.test(await page.textContent('.pg[data-g="chest"]')) && /in today's workout/.test(await page.textContent('.pg[data-g="shoulders"]')));
+      await page.click('.pg[data-g="back"]');
+      const sugg = await page.$$eval(".psugg .prow", x => x.map(e => e.innerText));
+      check(`${w}px: up to 3 suggestions, each with a reason`, sugg.length >= 1 && sugg.length <= 3 && sugg.every(s => /\n/.test(s.trim())), JSON.stringify(sugg));
+      check(`${w}px: list sorts by longest ago, with a switch to most done`, !!(await page.$('[data-act="picksort"][data-v="ago"].on')) && !!(await page.$('[data-act="picksort"][data-v="most"]')));
+      check(`${w}px: picker has no sideways scroll`, await noOverflow(page));
+      await page.click(".psugg .prow");
+      const st = await page.evaluate(() => ({ n: S.plan.items.length, at: focus.i, first: S.plan.items[0].ex, done: S.plan.items[0].sets[0].done }));
+      check(`${w}px: added right after the current exercise and opened`, st.n === 3 && st.at === 1 && st.first === 9 && st.done === true, JSON.stringify(st));
+      await ctx.close();
+    }
+    const { ctx, page } = await open(browser, URL, baseSeed({ sessions: hist, plan: { created: "", v: 2, items: [{ ex: 9, sets: [{ w: 12, r: 10, done: false }] }] } }), { mobile: true, w: 320, h: 568 });
+    await page.click('[data-act="open"][data-i="0"]');
+    check("the last set's Finish workout has a quiet 'add one more' link under it", /Finish workout/.test(await page.textContent("#ctaBox .cta")) && (await page.textContent("#ctaBox .addmore")) === "Not yet — add one more exercise");
+    await page.evaluate(() => { S.plan.items[0].sets[0].done = true; persistPlan(); rest = null; render(); });
+    check("end of workout asks 'Had enough?' with Finish as the main button", /Had enough\?/.test(await page.textContent(".upnext.done")) && /Finish workout/.test(await page.textContent("#ctaBox .cta")));
+    check("a quiet 'add one more' link sits under Finish", (await page.textContent("#ctaBox .addmore")) === "Not yet — add one more exercise" && await page.evaluate(() => document.querySelector("#ctaBox .addmore").getBoundingClientRect().bottom <= innerHeight));
+    await page.click("#ctaBox .addmore");
+    check("'add one more' opens the picker", /One more exercise/.test(await page.textContent(".sheet-h h2")));
+    await page.click('.pg[data-g="back"]'); await page.click(".list:not(.psugg) .prow");
+    check("one more exercise goes at the end and the workout isn't finished", await page.evaluate(() => S.plan && S.plan.items.length === 2 && focus.i === 1 && !S.plan.items[1].sets.some(s => s.done)));
+    await page.click('[data-act="back"]');
+    check("Today offers the same link once everything is done", !(await page.$('.list-foot [data-act="addmore"]')));
+    check("add exercise: no page errors", page.errors.length === 0, page.errors.join("; "));
     await ctx.close();
   }
 

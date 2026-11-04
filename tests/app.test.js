@@ -470,8 +470,19 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await page.click('[data-act="howtoggle"]'); await page.waitForTimeout(300);
     check("reduce motion: the static picture stays", !(await page.$(".fpic .ill[data-anim]")) && !(await page.evaluate(() => (document.querySelector(".fpic .ill") || {})._anim)));
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page.click('[data-act="back"]'); await page.click('[data-tab="exercises"]'); await page.click('[data-act="detail"][data-id="39"]'); await page.waitForTimeout(300);
-    check("no motion anywhere else (lists, exercise sheet)", !(await page.$("svg animate")) && !(await page.$(".ill[data-anim]")));
+    await page.click('[data-act="back"]'); await page.click('[data-tab="exercises"]'); await page.waitForTimeout(300);
+    check("lists keep static thumbnails", !(await page.$(".ill[data-anim]")) && !(await page.$("svg animate")));
+    const moves = async sel => page.evaluate(async sel => { const w = ms => new Promise(r => setTimeout(r, ms));
+      for (let k = 0; k < 60 && !(document.querySelector(sel) || {})._anim; k++) await w(25);
+      const s = document.querySelector(sel + " svg"), seen = new Set(); if (!s) return 0; for (let k = 0; k < 5; k++) { seen.add(s.innerHTML); await w(200); } return seen.size; }, sel);
+    await page.click('[data-act="detail"][data-id="39"]');
+    check("the exercise sheet (explanation always shown) animates", (await moves(".sheet .fpic .ill")) >= 3);
+    await page.evaluate(() => { sheet = null; render(); });
+    const st = await page.evaluate(() => STRETCHES.every(s => animOf(s) && imgOf(s) !== animOf(s)));
+    check("every stretch has an animated picture", st);
+    await page.evaluate(() => { S.sessions.push({ id: "z", date: new Date().toISOString(), v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8 }] }] }); startStretch("z"); });
+    check("the stretch player animates the stretch", (await moves(".stv .ill")) >= 3);
+    await page.evaluate(() => stretchClose());
     check("animated pictures: no page errors", page.errors.length === 0, page.errors.join("; "));
     await ctx.close();
   }

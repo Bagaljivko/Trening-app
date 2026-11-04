@@ -273,7 +273,23 @@ body.holding{overflow:hidden}
 .rov-next b{display:block;font-size:15px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
 .rov-next .rov-w{display:block;font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.2;font-variant-numeric:tabular-nums}
 .rov .cta.rov-go{justify-self:stretch}
-@media (prefers-reduced-motion:reduce){.rov-bg.over .rov-ring{animation:none}}
+/* entrance: the dimmed background fades in, the panel rises gently, then its parts follow one after another */
+.rov-bg{animation:none}
+.rov-bg.rov-in{animation:rovFade .45s ease-out both}
+.rov-bg.rov-in .rov{animation:rovRise .6s cubic-bezier(.22,1,.36,1) both}
+.rov-bg.rov-in .rov-h,.rov-bg.rov-in .rov-mid,.rov-bg.rov-in .rov-next,.rov-bg.rov-in .rov-go{animation:rovItem .55s cubic-bezier(.22,1,.36,1) both}
+.rov-bg.rov-in .rov-h{animation-delay:.1s}
+.rov-bg.rov-in .rov-mid{animation-delay:.16s}
+.rov-bg.rov-in .rov-next{animation-delay:.24s}
+.rov-bg.rov-in .rov-go{animation-delay:.3s}
+.rov-bg.rov-out{animation:rovOut .18s ease-in forwards}
+@keyframes rovFade{from{opacity:0}to{opacity:1}}
+@keyframes rovRise{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes rovItem{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes rovOut{to{opacity:0;transform:scale(.985)}}
+/* the "Go" text eases in when rest runs out */
+.rov-bg.over .rov-go-t{animation:rovItem .45s cubic-bezier(.22,1,.36,1) both}
+@media (prefers-reduced-motion:reduce){.rov-bg.over .rov-ring,.rov-bg.over .rov-go-t,.rov-bg.rov-in .rov,.rov-bg.rov-in .rov-h,.rov-bg.rov-in .rov-mid,.rov-bg.rov-in .rov-next,.rov-bg.rov-in .rov-go{animation:none}.rov-bg.rov-in{animation:rovFade .3s ease-out both}}
 .sm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
 .sm-grid div{border-radius:18px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);padding:12px 14px;min-width:0}
 .sm-grid b{display:block;font-size:28px;font-weight:300;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1930,7 +1946,7 @@ $app.addEventListener("click", e=>{
     case "holdstop": if(hold) endHold(Math.max(1, Math.round(heldMs()/1000)), false); break;
     case "holdcancel": hold=null; releaseWake(); render(); break;
     case "restskip": if(rest){ rest=null; releaseWake(); render(); } break;
-    case "rest30": if(rest){ if(rest.over){ rest = {end: Date.now()+30000, total: 30000, over:false, i: rest.i}; holdWake(); } else { rest.end+=30000; rest.total+=30000; } haptic(); render(); } break;
+    case "rest30": if(rest){ if(rest.over){ rest = {end: Date.now()+30000, total: 30000, over:false, i: rest.i}; holdWake(); } else { rest.end+=30000; rest.total+=30000; rest.ovIn = false; } haptic(); render(); } break;
     case "reststart": restStart(); break;
     case "restgo": rest=null; render(); break;   // kept for any old screen still showing it
     case "mute": S.settings.mute=!S.settings.mute; persistSettings(); if(hold || tab==="settings") render(); else if(document.getElementById("ctaBox")) document.getElementById("ctaBox").innerHTML=dockHTML(); break;
@@ -2301,7 +2317,8 @@ function restOverlay(){
   const left = Math.max(0, rest.end-Date.now()), C = 2*Math.PI*88;
   const go = timed ? tr("Start hold") : `${tr("Start set")} ${tg.j+1}`;
   const head = tg.next ? tr("Next exercise") : `${tr("Set")} ${tg.j+1} ${tr("of {n}", {n:it.sets.length})}`;
-  return `<div class="hov-bg rov-bg${rest.over?" over":""}"><div class="hov rov" role="alertdialog" aria-modal="true" aria-label="${rest.over?tr("Rest is over"):tr("Rest")}">
+  const enter = !rest.ovIn; rest.ovIn = true;
+  return `<div class="hov-bg rov-bg${rest.over?" over":""}${enter?" rov-in":""}"><div class="hov rov" role="alertdialog" aria-modal="true" aria-label="${rest.over?tr("Rest is over"):tr("Rest")}">
     <div class="rov-h">${rest.over ? (tg.next?tr("Time for the next exercise"):tr("Time for set {n}", {n:tg.j+1})) : tr("Rest")}</div>
     <div class="rov-mid"><div class="hov-ring rov-ring" role="timer">
       <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="trk" cx="100" cy="100" r="88"/><circle class="prog" id="rovRing" cx="100" cy="100" r="88" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${rest.over ? 0 : (C*(1-Math.min(1,left/ALERT_AT))).toFixed(1)}" transform="rotate(-90 100 100)"/></svg>
@@ -2314,6 +2331,13 @@ function restOverlay(){
 }
 // Start set: stop the alert and go to that set (never logs anything).
 function restStart(){
+  const bg = document.querySelector(".rov-bg");
+  if(bg && !bg.classList.contains("rov-out") && !matchMedia("(prefers-reduced-motion: reduce)").matches){
+    bg.classList.add("rov-out"); setTimeout(restGo, 180); return;
+  }
+  restGo();
+}
+function restGo(){
   const tg = restTarget(); rest = null; releaseWake();
   if(!tg){ render(); return; }
   haptic();

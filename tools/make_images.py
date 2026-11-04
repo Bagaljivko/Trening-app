@@ -1565,6 +1565,120 @@ NOGYM_DRAW = {
 }
 
 
+# ---------------------------------------------------------------- cool-down stretches
+def st_chest_doorway():
+    d = dict(N=(224, 84), P=(206, 152),
+             legs=[((200, 207), (194, G)), ((226, 206), (240, G))],
+             arms=[((216, 116), (214, 148)), ((190, 84), (190, 52))])
+    d["props"] = [post(180)]
+    d["arrows"] = [("L", 252, 96, 292, 96)]
+    return d
+
+
+def st_triceps_overhead():
+    d = dict(N=(202, 82), P=(200, 154),
+             legs=[((198, 208), (196, G)), ((204, 208), (206, G))],
+             arms=[((236, 64), (212, 38)), ((196, 40), (176, 66))])
+    d["H"] = (218, 60)
+    d["arrows"] = [("Q", 150, 40, 140, 70, 160, 96)]
+    return d
+
+
+def st_cross_shoulder():
+    d = front_stand([(250, 300), (196, 186)])
+    N = d["N"]
+    d["arms"] = [((N[0] - 22, N[1] + 26), (N[0] - 34, N[1] + 6)), ((N[0] - 30, N[1] + 6), (N[0] - 62, N[1] + 6))]
+    d["arrows"] = [("L", N[0] + 50, N[1] + 6, N[0] + 10, N[1] + 6)]
+    return d
+
+
+def st_side_bend():
+    d = front_stand([(110, 120), (110, 120)], spread=16)
+    P = d["P"]
+    N = (P[0] - 26, P[1] - 67)
+    d["N"] = N
+    d["H"] = (N[0] - 12, N[1] - 22)
+    d["arms"] = [((N[0] - 30, N[1] - 22), (N[0] - 62, N[1] - 30)), ((N[0] - 22, N[1] - 30), (N[0] - 52, N[1] - 46))]
+    d["arrows"] = [("Q", N[0] + 56, N[1] - 30, N[0] + 30, N[1] - 80, N[0] - 30, N[1] - 84)]
+    return d
+
+
+def st_childs_pose():
+    return dict(N=(236, 226), P=(170, 208), H=(258, 238),
+                legs=[((218, 250), (166, 258)), ((222, 252), (170, 259))],
+                arms=[((266, 244), (300, 254)), ((270, 246), (304, 256))],
+                arrows=[("L", 282, 200, 336, 200)])
+
+
+def st_cat_cow():
+    return dict(N=(250, 196), P=(176, 200), H=(266, 216),
+                legs=[((172, 254), (122, 258)), ((178, 256), (128, 259))],
+                arms=[((250, 228), (250, 258)), ((256, 228), (256, 259))],
+                arrows=[("Q", 184, 172, 214, 128, 244, 172, True)])
+
+
+def st_cobra():
+    return dict(N=(228, 186), P=(172, 246),
+                legs=[((118, 252), (64, 256)), ((120, 254), (68, 258))],
+                arms=[((232, 222), (238, 256)), ((238, 222), (246, 258))],
+                arrows=[("Q", 262, 230, 282, 196, 262, 160)])
+
+
+def st_quad_standing():
+    d = dict(N=(206, 80), P=(204, 152),
+             legs=[((206, 207), (206, G)), ((200, 206), (176, 158))],
+             arms=[((236, 100), (266, 104)), ((188, 116), (178, 152))])
+    d["arrows"] = [("Q", 150, 196, 140, 160, 160, 132)]
+    return d
+
+
+def st_hamstring_seated():
+    return dict(N=(228, 196), P=(170, 244),
+                legs=[((222, 250), (276, 254)), ((224, 252), (280, 256))],
+                arms=[((254, 214), (278, 236)), ((258, 216), (284, 238))],
+                arrows=[("Q", 214, 160, 260, 158, 290, 196)])
+
+
+def st_hip_flexor():
+    d = dict(N=(204, 134), P=(200, 206),
+             legs=[((164, 256), (114, 258)), ((256, 206), (260, G))],
+             arms=[((226, 162), (248, 198)), ((230, 160), (254, 196))])
+    d["arrows"] = [("L", 178, 228, 226, 228)]
+    return d
+
+
+def st_figure_four():
+    d = dict(N=(150, 246), P=(222, 246), H=(126, 244),
+             legs=[((249, 199), (305, 199)), ((272, 224), (240, 186))],
+             arms=[((180, 220), (226, 206)), ((184, 222), (230, 210))])
+    d["arrows"] = [("Q", 330, 176, 324, 138, 286, 128)]
+    return d
+
+
+def st_biceps_wall():
+    d = dict(N=(210, 82), P=(204, 152),
+             legs=[((200, 207), (196, G)), ((214, 207), (222, G))],
+             arms=[((214, 116), (216, 148)), ((176, 86), (142, 90))])
+    d["props"] = [post(134)]
+    d["arrows"] = [("Q", 232, 54, 260, 70, 250, 104)]
+    return d
+
+
+STRETCH_DRAW = {
+    "Doorway chest stretch": st_chest_doorway,
+    "Overhead triceps stretch": st_triceps_overhead,
+    "Cross-body shoulder stretch": st_cross_shoulder,
+    "Standing side bend": st_side_bend,
+    "Child's pose": st_childs_pose,
+    "Cat-cow": st_cat_cow,
+    "Cobra stretch": st_cobra,
+    "Standing quad stretch": st_quad_standing,
+    "Seated hamstring stretch": st_hamstring_seated,
+    "Kneeling hip flexor stretch": st_hip_flexor,
+    "Lying figure-four stretch": st_figure_four,
+    "Wall biceps stretch": st_biceps_wall,
+}
+
 PLACEHOLDER = ("new-exercise", "New exercise", lambda: stand([(150, 120), (30, 60)]))
 
 
@@ -1582,6 +1696,14 @@ def nogym_names():
     src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
     m = re.search(r"const NOGYM = (\[.*?\]);\n", src)
     return [e["name"] for e in json.loads(m.group(1))]
+
+
+def stretch_names():
+    """Cool-down stretch names from the STRETCHES list in index.html."""
+    import json
+    src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+    m = re.search(r"const STRETCHES = (\[.*?\]);\n", src)
+    return [e["name"] for e in json.loads(m.group(1))] if m else []
 
 
 def main():
@@ -1603,6 +1725,17 @@ def main():
             sys.exit("Name clash with a gym exercise: " + n)
         with open(os.path.join(OUT, s + ".svg"), "w", encoding="utf-8") as fh:
             fh.write(svg(n, NOGYM_DRAW[n]()))
+        written.append(s)
+    st = stretch_names()
+    gone = [n for n in st if n not in STRETCH_DRAW]
+    if gone:
+        sys.exit("No drawing for stretch: " + ", ".join(gone))
+    for n in st:
+        s = slug(n)
+        if s in written:
+            sys.exit("Name clash with an exercise: " + n)
+        with open(os.path.join(OUT, s + ".svg"), "w", encoding="utf-8") as fh:
+            fh.write(svg(n, STRETCH_DRAW[n]()))
         written.append(s)
     s, title, fn = PLACEHOLDER
     with open(os.path.join(OUT, s + ".svg"), "w", encoding="utf-8") as fh:

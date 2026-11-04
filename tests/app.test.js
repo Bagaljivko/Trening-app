@@ -411,6 +411,41 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- cool-down stretch and core after the workout
+  console.log("cool-down stretch and core after the workout");
+  for (const [w, h] of WIDTHS) {
+    const { ctx, page } = await open(browser, URL, baseSeed({ sessions: [{ id: "old", date: day(6), v: 2, items: [{ ex: 7, sets: [{ w: 45, r: "" }] }] }],
+      plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 70, r: 8, done: true }, { w: 70, r: 8, done: false }] }] } }), { mobile: true, w, h });
+    await page.click('[data-act="open"][data-i="0"]'); await page.click('#ctaBox [data-act="done"]'); await page.waitForTimeout(250);
+    check(`${w}px: summary offers a cool-down stretch and core (no core today)`, !!(await page.$('.sheet [data-act="stretchgo"]')) && !!(await page.$('.sheet [data-act="corego"]')));
+    check(`${w}px: first time both cards are quiet, below the summary`, (await page.$$(".sheet .nudge.lv0")).length === 2 && await noOverflow(page));
+    await page.click('[data-act="stretchgo"]'); await page.waitForTimeout(250);
+    check(`${w}px: the stretch player shows 4 stretches with a picture and fits`, /of 4/.test(await page.textContent(".stv .hov-set")) && !!(await page.$(".stv .ill svg")) && await page.evaluate(() => { const o = document.querySelector(".stv"), b = o.getBoundingClientRect().bottom; return [...o.children].every(c => c.getBoundingClientRect().bottom <= b + 1); }));
+    check(`${w}px: stretches are not logged as sets`, (await stored(page)).sessions.slice(-1)[0].items.length === 1);
+    for (let k = 0; k < 10 && await page.$(".stv"); k++) { await page.evaluate(() => { stretch.end = Date.now() - 10; }); await page.waitForTimeout(320); }
+    check(`${w}px: finishing the stretch marks the workout stretched`, await page.evaluate(() => !stretch && S.sessions[S.sessions.length - 1].stretched === true) && !!(await page.$(".sheet .nudge.done")));
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(browser, URL, baseSeed({ sessions: [{ id: "old", date: day(6), v: 2, items: [{ ex: 7, sets: [{ w: 45, r: "" }] }] }] }), { mobile: true });
+    const levels = [];
+    for (let n = 0; n < 5; n++) {
+      await page.evaluate(() => { sheet = null; S.plan = { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 70, r: 8, done: true }] }] }; finish(); });
+      levels.push(await page.evaluate(() => [...document.querySelectorAll(".sheet .nudge")].map(e => (e.className.match(/lv\d/) || [""])[0]).sort().join("")));
+    }
+    check("skipping makes the offers stronger: quiet, then Recommended, then Highly recommended", levels.join(" ") === "lv0lv0 lv0lv0 lv1lv1 lv1lv1 lv2lv2", levels.join(" "));
+    check("the strongest level says why", /Highly recommended/i.test(await page.textContent(".sheet")) && /No stretching in your last 4 workouts/.test(await page.textContent(".sheet")));
+    await page.click('[data-act="nudgeskip"][data-k="st"]');
+    check("Not today hides the card for this workout", !(await page.$('.sheet [data-act="stretchgo"]')));
+    await page.click('[data-act="corego"]');
+    check("Add a core exercise opens the picker on Abs", /Abs/.test(await page.textContent(".sheet-h h2")) && (await page.$$(".prow")).length > 0);
+    await page.click(".list:not(.psugg) .prow");
+    await page.evaluate(() => { S.plan.items.forEach(it => it.sets.forEach(s => { s.done = true; })); finish(); });
+    check("with core done today the core card is gone and its count resets", !(await page.$('[data-act="corego"]')) && (await stored(page)).settings.nudge.core.skips === 0);
+    check("cool-down: no page errors", page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- backup
   console.log("backup and restore");
   {

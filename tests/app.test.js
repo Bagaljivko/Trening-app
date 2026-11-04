@@ -388,6 +388,29 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------- keep going from the summary
+  console.log("keep going from the summary");
+  for (const [w, h] of WIDTHS) {
+    const hist = [{ id: "old", date: day(3), v: 2, items: [{ ex: 1, sets: [{ w: 100, r: 5 }] }] }];
+    const { ctx, page } = await open(browser, URL, baseSeed({ sessions: hist, plan: { created: "", v: 2, items: [{ ex: 9, sets: [{ w: 12, r: 10, done: false }] }] } }), { mobile: true, w, h });
+    await page.click('[data-act="open"][data-i="0"]');
+    check(`${w}px: 'add one more' is still under the last set's Finish workout`, !!(await page.$('#ctaBox [data-act="addmore"]')));
+    await page.click('#ctaBox [data-act="done"]'); await page.waitForTimeout(250);
+    check(`${w}px: the summary right after finishing offers Keep going`, !!(await page.$('.sheet [data-act="keepgoing"]')) && (await stored(page)).sessions.length === 2);
+    check(`${w}px: summary with Keep going has no sideways scroll`, await noOverflow(page));
+    await page.click('.sheet [data-act="keepgoing"]'); await page.waitForTimeout(200);
+    const s1 = await stored(page);
+    check(`${w}px: Keep going reopens the workout and opens the picker`, s1.sessions.length === 1 && !!s1.plan && s1.plan.items[0].sets[0].done === true && /One more exercise/.test(await page.textContent(".sheet-h h2")));
+    await page.click('.pg[data-g="back"]'); await page.click(".list:not(.psugg) .prow");
+    check(`${w}px: the extra exercise goes at the end of the reopened workout`, await page.evaluate(() => S.plan.items.length === 2 && focus.i === 1 && S.plan.items[0].sets[0].done));
+    await page.evaluate(() => { S.plan.items[1].sets.forEach(s => { s.done = true; }); persistPlan(); finish(); }); await page.waitForTimeout(200);
+    const s2 = await stored(page);
+    check(`${w}px: finishing again saves it once, with both exercises`, s2.sessions.length === 2 && s2.sessions[1].items.length === 2 && !s2.plan);
+    check(`${w}px: older summaries in History don't offer Keep going`, await page.evaluate(() => { sheet = { type: "summary", id: "old" }; render(); return !document.querySelector('[data-act="keepgoing"]'); }));
+    check(`${w}px: keep going: no page errors`, page.errors.length === 0, page.errors.join("; "));
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------- backup
   console.log("backup and restore");
   {

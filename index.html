@@ -840,18 +840,19 @@ function hydrateIll(){
   });
 }
 const picHTML = e => `<div class="fpic">${illHTML(e, "", e.name)}</div>`;
-/* Animated pictures: only on the exercise screen while its explanation is expanded ("Show more"),
-   and never with "reduce motion". The animated file (images/anim/) loops the movement with SVG
-   <animate>; collapsing puts the static picture back, so nothing moves anywhere else. */
+/* Animated pictures: wherever an exercise or stretch is shown with its explanation - the exercise
+   screen while "Show more" is open, the exercise sheet, and the stretch player - and never with
+   "reduce motion". Thumbnails, cards and pop-ups keep the static picture. */
 const motionOK = () => !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
-const animOf = e => { const u = imgOf(e); return /new-exercise\.svg$/.test(u) || (e && STMAP[e.id]) ? "" : u.replace("images/", "images/anim/"); };
-function picAnimHTML(e){
+const animOf = e => { const u = imgOf(e); return /new-exercise\.svg$/.test(u) ? "" : u.replace("images/", "images/anim/"); };
+function illAnimHTML(e, label=""){
   const a = motionOK() ? animOf(e) : "";
-  if(!a) return picHTML(e);
+  if(!a) return illHTML(e, "", label);
   const url = imgOf(e), ready = svgCache.get(a);
   // until the animated file has loaded, the static picture shows in its place
-  return `<div class="fpic"><span class="ill" data-ill="${url}" data-anim="${a}"${ready?' data-anim-on="1"':""}>${ready || svgCache.get(url) || ""}</span></div>`;
+  return `<span class="ill" data-ill="${url}" data-anim="${a}"${ready?' data-anim-on="1"':""}${label?"":' aria-hidden="true"'}>${ready || svgCache.get(url) || ""}</span>`;
 }
+const picAnimHTML = e => `<div class="fpic">${illAnimHTML(e, e.name)}</div>`;
 function gymExercises(){ return SEED.ex.map(exObj).concat(S.custom); }
 function nogymExercises(){ return NOGYM.map(ngObj); }
 function allExercises(){ return gymExercises().concat(nogymExercises()); }
@@ -1854,7 +1855,7 @@ function viewSheet(){
     <div class="sheet-h"><h2>${esc(tr(title))}</h2><button class="iconbtn" data-act="close" aria-label="${tr("Close")}">${ICON.x}</button></div><div class="sheet-b">${body}</div></div></div>`;
   if(sheet.type==="detail"){
     const e = exById(sheet.id); const h = historyFor(sheet.id); const pts = h.map(x=>maxW(x.it)); const best = Math.max(0,...pts);
-    return wrap(e.name, e.name, `<div class="grp">${gName(e.group)}${musclesOf(e.id).length?` · works ${esc(muscleNames(musclesOf(e.id)).join(", "))}`:""}</div>${picHTML(e)}${e.desc?`<p class="how open">${esc(exDesc(e))}</p>`:""}
+    return wrap(e.name, e.name, `<div class="grp">${gName(e.group)}${musclesOf(e.id).length?` · works ${esc(muscleNames(musclesOf(e.id)).join(", "))}`:""}</div>${picAnimHTML(e)}${e.desc?`<p class="how open">${esc(exDesc(e))}</p>`:""}
       <div class="stats sm"><div><b>${h.length}</b><span>${tr("times")}</span></div><div><b>${h.length?(best||"BW"):"–"}</b><span>${tr("best")} ${isTimed(sheet.id)?tr("seconds"):"kg"}</span></div><div><b>${h.length?(maxW(h[h.length-1].it)||"BW"):"–"}</b><span>${tr("last")} ${isTimed(sheet.id)?tr("seconds"):"kg"}</span></div></div>
       ${(()=>{ const hn=overloadHint(sheet.id); return !hn ? "" : hn.plateau ? `<p class="last"><span class="up">${esc(hn.text)}</span></p>` : `<p class="last">${tr("Last time")} <b>${esc(hn.last)}</b>. ${tr("Next time")} ${esc(hn.text)}.</p>`; })()}
       ${noteHTML(sheet.id)}
@@ -2409,7 +2410,7 @@ function stretchOverlay(){
   return `<div class="hov-bg stv-bg"><div class="hov stv" role="dialog" aria-modal="true" aria-label="${tr("Cool-down stretch")}">
     <div class="hov-top"><button class="iconbtn" data-act="stclose" aria-label="${tr("Close")}">${ICON.x}</button><span class="hov-set">${tr("Stretch {a} of {b}", {a:stretch.k+1, b:stretch.list.length})}</span><span class="hov-sp"></span></div>
     <h2 class="hov-name">${esc(s.name)}</h2>
-    <div class="hov-pic stv-pic">${illHTML(s, "", s.name)}</div>
+    <div class="hov-pic stv-pic">${illAnimHTML(s, s.name)}</div>
     <p class="stv-desc">${esc(exDesc(s))}</p>
     <div class="stv-time"><span class="stv-side">${sideTxt}</span><b id="stvT">${Math.ceil(left/1000)}</b><span class="stv-u">${tr("seconds")}</span></div>
     <div class="stv-line"><i id="stvBar" style="transform:scaleX(${Math.max(0,left/stretch.total).toFixed(3)})"></i></div>

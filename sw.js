@@ -1,7 +1,19 @@
 // Offline support: keep the app shell and all exercise pictures cached, refresh them in the background.
-const CACHE = "training-v25";
+const CACHE = "training-v26";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "qr.js", "fonts/inter-latin.woff2", "fonts/inter-latin-ext.woff2",
   "images/archer-push-up.svg",
+  "images/anim/cat-cow.svg",
+  "images/anim/child-s-pose.svg",
+  "images/anim/cobra-stretch.svg",
+  "images/anim/cross-body-shoulder-stretch.svg",
+  "images/anim/doorway-chest-stretch.svg",
+  "images/anim/kneeling-hip-flexor-stretch.svg",
+  "images/anim/lying-figure-four-stretch.svg",
+  "images/anim/overhead-triceps-stretch.svg",
+  "images/anim/seated-hamstring-stretch.svg",
+  "images/anim/standing-quad-stretch.svg",
+  "images/anim/standing-side-bend.svg",
+  "images/anim/wall-biceps-stretch.svg",
   "images/anim/archer-push-up.svg",
   "images/anim/arnold-press-standing.svg",
   "images/anim/back-extension.svg",

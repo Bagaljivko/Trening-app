@@ -334,9 +334,9 @@ body.holding{overflow:hidden}
 .rec{border-radius:16px;padding:12px 14px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);font-size:14px;line-height:1.4}
 .rec b{display:block;font-size:13px;margin-bottom:2px}
 .rec.plateau{box-shadow:inset 0 0 0 1.5px var(--neon)}
-.utoast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px);background:var(--ink);color:var(--bg);padding:8px 8px 8px 16px;border-radius:22px;font-size:14px;font-weight:600;box-shadow:0 6px 24px rgb(0 0 0 / .35);animation:udrop .2s ease-out}
+.utoast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 48px);background:var(--s1);color:var(--mut);padding:3px 4px 3px 14px;border-radius:16px;border:1px solid var(--line);font-size:13px;font-weight:500;box-shadow:none;animation:udrop .2s ease-out}
 .utoast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.utoast button{flex:none;height:34px;padding:0 14px;border-radius:17px;background:var(--bg);color:var(--ink);font-weight:700;font-size:14px}
+.utoast button{flex:none;height:28px;padding:0 10px;border-radius:14px;background:none;color:var(--neon-txt);font-weight:700;font-size:13px}
 @keyframes udrop{from{transform:translate(-50%,-12px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 .rest.over .rest-t{color:var(--mut)}
 #ctaBox{display:flex;flex-direction:column;gap:10px}

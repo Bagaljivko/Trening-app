@@ -258,6 +258,8 @@ body.holding{overflow:hidden}
 .rov-mid{display:flex;flex-direction:column;align-items:center;gap:clamp(10px,1.8vh,16px);min-height:0}
 .rov-ring{width:min(56vw,32vh,240px)}
 .rov-ring svg{overflow:visible}
+.rov-ringbtn{display:block;padding:0;border:0;background:none;color:inherit;border-radius:50%;cursor:pointer}
+.rov-ringbtn:active{opacity:1;transform:scale(.97)}
 .rov-ring .trk{stroke-width:8}
 .rov-ring .prog{stroke:var(--neon);stroke-width:8;filter:var(--glow)}
 .rov-t{font-size:clamp(56px,min(17vw,9.5vh),84px);font-weight:200;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -2635,10 +2637,10 @@ function restOverlay(){
   const enter = !rest.ovIn; rest.ovIn = true;
   return `<div class="hov-bg rov-bg${rest.over?" over":""}${enter?" rov-in":""}"><div class="hov rov" role="alertdialog" aria-modal="true" aria-label="${rest.over?tr("Rest is over"):tr("Rest")}">
     <div class="rov-h">${rest.over ? (tg.next?tr("Time for the next exercise"):tr("Time for set {n}", {n:tg.j+1})) : tr("Rest")}</div>
-    <div class="rov-mid"><div class="hov-ring rov-ring" role="timer">
+    <div class="rov-mid">${rest.over ? `<button class="hov-ring rov-ring rov-ringbtn" data-act="reststart" aria-label="${esc(go)}">` : `<div class="hov-ring rov-ring" role="timer">`}
       <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="trk" cx="100" cy="100" r="88"/><circle class="prog" id="rovRing" cx="100" cy="100" r="88" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${rest.over ? 0 : (C*(1-Math.min(1,left/ALERT_AT))).toFixed(1)}" transform="rotate(-90 100 100)"/></svg>
       <div class="hov-c">${rest.over ? `<div class="rov-go-t">${tr("Go")}</div><div class="hov-of" id="rovOver">${tr("Over by {t}", {t:fmtT(Date.now()-rest.end)})}</div>` : `<div class="rov-t" id="rovT">${Math.ceil(left/1000)}</div><div class="hov-of">${tr("seconds left")}</div>`}</div>
-    </div>
+    ${rest.over ? "</button>" : "</div>"}
     <button class="rov-30" data-act="rest30">+30 s</button></div>
     <div class="rov-next"><div class="rov-pic">${illHTML(e)}</div><div class="rov-txt"><span class="rov-k">${head}</span><b>${esc(e.name)}</b><span class="rov-w">${esc(what)}</span></div></div>
     <button class="cta rov-go" data-act="reststart">${go}</button>

@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<!-- painted before anything else loads, so a reload or a wake-up never flashes white -->
+<style>html{background:#F5F5F7}@media (prefers-color-scheme:dark){html{background:#000}}</style>
 <title>Training</title>
 <script>
   // No zooming (native app feel). iOS Safari ignores user-scalable=no, so:
@@ -105,7 +108,7 @@ html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout
 img,svg{-webkit-user-drag:none}
 input,textarea,select,[contenteditable],.qr-url,.qr-url *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 /* native feel: the app frame never bounces or rubber-bands; phones never resize text on their own */
-html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html{height:100%;background:var(--bg);scroll-padding-top:env(safe-area-inset-top,0px);overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{overscroll-behavior:none}
 /* while a sheet or a timed hold is open, the screen behind it can't be scrolled */
 html.locked,html.locked body{overflow:hidden}
@@ -183,7 +186,7 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .fbody{flex:1;padding:26px 24px 0}
 .grp{font-size:13px;color:var(--mut)}
 .fname{font-size:30px;line-height:1.12;letter-spacing:-.03em;margin:6px 0 0}
-.how{margin:12px 0 0;font-size:14.5px;line-height:1.5;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.how{margin:8px 0 0;font-size:14.5px;line-height:1.5;color:var(--mut);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .how.open{display:block}
 .ill{display:block}
 .ill svg{display:block;width:100%;height:100%}
@@ -191,10 +194,10 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .ill-s-prop{stroke:var(--ill-prop)}.ill-f-prop{fill:var(--ill-prop)}.ill-s-floor{stroke:var(--ill-floor)}.ill-f-floor{fill:var(--ill-floor)}
 .ill-s-iron{stroke:var(--ill-iron)}.ill-f-iron{fill:var(--ill-iron)}.ill-s-ironin{stroke:var(--ill-ironin)}.ill-f-ironin{fill:var(--ill-ironin)}
 .ill-s-arrow{stroke:var(--ill-arrow)}.ill-f-arrow{fill:var(--ill-arrow)}
-.fpic{margin:16px 0 0;background:none;border:0;box-shadow:none}
+.fpic{margin:10px 0 0;background:none;border:0;box-shadow:none}
 .fpic .ill{width:100%;aspect-ratio:4/3;max-height:30vh;max-height:30dvh}
 .sheet-b .fpic .ill{max-height:38vh;max-height:38dvh}
-.more{margin-top:4px;color:var(--ink)}
+.more{margin-top:2px;color:var(--neon-txt);font-weight:600}
 .nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:22px 0 0}
 .num{min-width:0;border-radius:22px;padding:14px 14px 14px;background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--line)}
 .num.kg{color:var(--kg);background:var(--kg-bg);box-shadow:inset 0 0 0 1.5px var(--kg)}
@@ -334,9 +337,9 @@ body.holding{overflow:hidden}
 .rec{border-radius:16px;padding:12px 14px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);font-size:14px;line-height:1.4}
 .rec b{display:block;font-size:13px;margin-bottom:2px}
 .rec.plateau{box-shadow:inset 0 0 0 1.5px var(--neon)}
-.utoast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px);background:var(--ink);color:var(--bg);padding:8px 8px 8px 16px;border-radius:22px;font-size:14px;font-weight:600;box-shadow:0 6px 24px rgb(0 0 0 / .35);animation:udrop .2s ease-out}
+.utoast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 48px);background:var(--s1);color:var(--mut);padding:3px 4px 3px 14px;border-radius:16px;border:1px solid var(--line);font-size:13px;font-weight:500;box-shadow:none;animation:udrop .2s ease-out}
 .utoast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.utoast button{flex:none;height:34px;padding:0 14px;border-radius:17px;background:var(--bg);color:var(--ink);font-weight:700;font-size:14px}
+.utoast button{flex:none;height:28px;padding:0 10px;border-radius:14px;background:none;color:var(--neon-txt);font-weight:700;font-size:13px}
 @keyframes udrop{from{transform:translate(-50%,-12px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 .rest.over .rest-t{color:var(--mut)}
 #ctaBox{display:flex;flex-direction:column;gap:10px}
@@ -440,6 +443,9 @@ body.holding{overflow:hidden}
 .settings .setrow .m{color:var(--mut);font-size:15px}
 .half-note{flex:1;margin:0}
 .chips.langs{margin-top:12px}
+.drv-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.drv-x{width:32px;height:32px;margin-right:-6px;color:var(--mut);opacity:.6}
+.drv-x svg{width:16px;height:16px}
 .ftop .fadd{flex:none;margin-right:-8px}
 .ftop .fadd svg{width:22px;height:22px;stroke:currentColor}
 .nudge{margin:16px 0 0;padding:14px 16px;border-radius:18px;border:1px solid var(--line)}
@@ -1503,10 +1509,9 @@ function driveSection(){
   const status = drive.needsReconnect ? `<span class="danger">${tr("The connection expired. Tap Reconnect.")}</span>`
     : drive.busy ? tr("Backing up…") : drive.lastError ? esc(drive.lastError) : drive.pending ? tr("Changes are waiting to be backed up…")
     : drive.lastBackup ? tr("Last backup: {when}", {when:esc(when(drive.lastBackup))}) : tr("No backup yet.");
-  return `<h2 class="sub">Google Drive</h2>
+  return `<h2 class="sub drv-h">Google Drive<button class="iconbtn drv-x" data-act="drivedisconnect" aria-label="${tr("Disconnect Google Drive")}">${ICON.x}</button></h2>
       <p class="fine">${tr("Connected:")} <b>${esc(drive.email || tr("Google account"))}</b><br>${status}</p>
-      <div class="srow">${drive.needsReconnect ? `<button class="cta ghost half" data-act="drivereconnect">${tr("Reconnect")}</button>` : `<button class="cta ghost half" data-act="drivenow">${tr("Back up now")}</button>`}<button class="cta ghost half" data-act="driverestore">${tr("Restore from Drive")}</button></div>
-      <button class="link danger" style="margin-top:12px" data-act="drivedisconnect">${tr("Disconnect Google Drive")}</button>`;
+      <div class="srow">${drive.needsReconnect ? `<button class="cta ghost half" data-act="drivereconnect">${tr("Reconnect")}</button>` : `<button class="cta ghost half" data-act="drivenow">${tr("Back up now")}</button>`}<button class="cta ghost half" data-act="driverestore">${tr("Restore from Drive")}</button></div>`;
 }
 
 /* ---------- keeping the data safe ---------- */

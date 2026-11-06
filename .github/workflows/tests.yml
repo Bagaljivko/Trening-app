@@ -7,7 +7,7 @@ on:
 jobs:
   app:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,3 +19,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run app tests (320 / 375 / 430 px, dark and light)
         run: node tests/app.test.js
+      - name: Release checklist (CHECKLIST.md)
+        run: |
+          git fetch --depth=1 origin main
+          node tests/checklist.js --skip-suite

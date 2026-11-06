@@ -328,6 +328,11 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     check(`${w}px: when rest is over it keeps beeping until you start`, !!(await page.$(".rov-bg.over")) && d >= 2, d + " beeps");
     await page.evaluate(() => { rest.beep = Date.now() - 6000; rest.end = Date.now() - 130000; window.__dings = 0; }); await page.waitForTimeout(400);
     check(`${w}px: the alert goes quiet after 2 minutes`, (await page.evaluate(() => window.__dings)) === 0);
+    check(`${w}px: the ring isn't tappable during the countdown`, await page.evaluate(() => { rest.end = Date.now() + 8000; rest.over = false; render(); return !document.querySelector(".rov-ringbtn"); }));
+    await page.evaluate(() => { rest.end = Date.now() - 50; rest.over = true; render(); });
+    await page.click(".rov-ringbtn", { force: true }); await page.waitForTimeout(250);
+    check(`${w}px: tapping Go starts the set like the button`, !(await page.$(".rov-bg")) && await page.evaluate(() => rest === null && focus.i === 0 && selSet === 1 && S.plan.items[0].sets[1].done === false));
+    await page.evaluate(() => { startRest(60000, 0); rest.end = Date.now() - 50; }); await page.waitForTimeout(500);
     await page.click(".rov-go"); await page.waitForTimeout(250);
     check(`${w}px: Start set stops the alert and opens that set without logging it`, !(await page.$(".rov-bg")) && await page.evaluate(() => rest === null && focus.i === 0 && selSet === 1 && S.plan.items[0].sets[1].done === false));
     await ctx.close();

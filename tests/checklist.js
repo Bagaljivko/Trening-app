@@ -182,11 +182,11 @@ async function page(b, base, opts = {}) {
       changed = execSync(`git -C "${ROOT}" diff --quiet origin/main -- index.html sw.js images fonts qr.js manifest.webmanifest icons || echo changed`, { encoding: "utf8" }).trim() === "changed"; }
     const bumped = !changed || !oldDir || ver !== oldVer;
     item(8, "Update reaches phones: offline-cache version raised when app files changed, every cached file exists", bumped && !missing.length,
-      [!bumped ? `cache still ${ver} (bump it in sw.js and index.html)` : `${oldVer || "?"} -> ${ver}`, missing.length ? "missing: " + missing.slice(0, 3).join(", ") : ""].filter(Boolean).join("; "));
+      [!bumped ? `cache still ${ver} (bump it in sw.js and index.html)` : !changed ? `no app files changed (${ver})` : `${oldVer || "?"} -> ${ver}`, missing.length ? "missing: " + missing.slice(0, 3).join(", ") : ""].filter(Boolean).join("; "));
   }
 
   await b.close(); newSrv.close(); if (oldSrv) oldSrv.close();
-  const failed = results.filter(r => r.ok === false);
-  console.log(`\n${results.length - failed.length} of ${results.length} items passed${failed.length ? " - DO NOT MERGE" : " - OK to merge"}`);
+  const failed = results.filter(r => r.ok === false), skipped = results.filter(r => r.ok === null);
+  console.log(`\n${results.length - failed.length - skipped.length} of ${results.length} items passed${skipped.length ? `, ${skipped.length} run separately` : ""}${failed.length ? " - DO NOT MERGE" : " - OK to merge"}`);
   process.exit(failed.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

@@ -670,7 +670,7 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     };
     const gis = () => { window.google = { accounts: { oauth2: { initTokenClient: cfg => ({ requestAccessToken: () => setTimeout(() => cfg.callback({ access_token: "tok", expires_in: 3600 }), 5) }), hasGrantedAllScopes: () => true, revoke: () => {} } } }; };
     const backup = () => { const f = Object.values(files).find(x => x.name === "training-log-backup.json"); return f && JSON.parse(f.content); };
-    const seed = baseSeed({ sessions: [{ id: "a", date: day(3), v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8 }] }] }], plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 62.5, r: 8, done: false }, { w: 62.5, r: 8, done: false }] }] } });
+    const seed = baseSeed({ settings: { count: 7, mute: true, lastExport: Date.now(), rest: "90", notes: { 0: "Bench 3" } }, weighins: [{ id: "w1", date: day(2).slice(0, 10), w: 88.4, waist: 90, chest: null, arm: null }], profile: { name: "Ilija", height: 183, startW: 92, goalW: 84 }, sessions: [{ id: "a", date: day(3), v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8 }] }] }], plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 62.5, r: 8, done: false }, { w: 62.5, r: 8, done: false }] }] } });
     const ctx = await browser.newContext({ viewport: { width: 375, height: 667 }, serviceWorkers: "block" });
     await ctx.route("https://www.googleapis.com/**", handler); await ctx.addInitScript(gis);
     const page = await ctx.newPage(); page.on("dialog", d => d.accept());
@@ -680,17 +680,35 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     const ups = () => Object.values(files).find(x => x.name === "training-log-backup.json").modifiedTime;
     const u0 = ups();
     await page.click('[data-tab="today"]'); await page.click('[data-act="open"][data-i="0"]'); await page.click('#ctaBox [data-act="done"]'); await page.waitForTimeout(4800);
-    check("no Drive upload for a set mid-workout", ups() === u0);
+    check("no Drive upload on every set tap mid-workout", ups() === u0);
     await page.click('#ctaBox [data-act="done"]'); await page.waitForTimeout(5200);
     check("finished workout is backed up to Drive", backup().sessions.length === 2);
     await ctx.close();
     const ctx2 = await browser.newContext({ viewport: { width: 375, height: 667 }, serviceWorkers: "block" });
     await ctx2.route("https://www.googleapis.com/**", handler); await ctx2.addInitScript(gis);
     const p2 = await ctx2.newPage(); p2.on("dialog", d => d.accept());
-    await p2.goto(URL); await toSettings(p2); await p2.click('[data-act="driveconnect"]');
-    await p2.waitForSelector('[data-act="dorestore"]', { timeout: 5000 }); await p2.click('[data-act="dorestore"]'); await p2.waitForTimeout(400);
-    check("a new phone gets its history back from Drive", (await p2.evaluate(() => S.sessions.length)) === 2);
+    await p2.goto(URL);
+    check("a wiped/new app offers to restore from Google Drive on Today", await p2.isVisible('.rs-ban [data-act="drivefind"]'));
+    await p2.click('.rs-ban [data-act="drivefind"]'); await p2.waitForTimeout(900);
+    const got = await p2.evaluate(() => ({ s: S.sessions.length, w: S.weighins.length, waist: (S.weighins[0] || {}).waist, name: S.profile.name, goal: S.profile.goalW, lang: S.settings.lang, rest: S.settings.rest, notes: S.settings.notes, connected: drive.connected, banner: !!document.querySelector(".rs-ban") }));
+    check("one tap brings back every workout, weigh-in, profile and setting", got.s === 2 && got.w === 1 && got.waist === 90 && got.name === "Ilija" && got.goal === 84 && got.rest === seed.settings.rest && JSON.stringify(got.notes) === JSON.stringify(seed.settings.notes || {}) && got.connected && !got.banner);
+    check("restoring didn't shrink the Drive backup", backup().sessions.length === 2 && backup().weighins.length === 1);
     await ctx2.close();
+    // a phone that already has a different workout connects: the Drive backup is merged in, never overwritten
+    const ctx3 = await browser.newContext({ viewport: { width: 375, height: 667 }, serviceWorkers: "block" });
+    await ctx3.route("https://www.googleapis.com/**", handler); await ctx3.addInitScript(gis);
+    const p3 = await ctx3.newPage(); p3.on("dialog", d => d.accept());
+    await p3.goto(URL); await p3.evaluate(s => localStorage.setItem("training-log-v1", JSON.stringify(s)), baseSeed({ sessions: [{ id: "z", date: day(1), v: 2, items: [{ ex: 1, sets: [{ w: 100, r: 5 }] }] }], profile: { name: "Local" }, plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 50, r: 8, done: false }, { w: 50, r: 8, done: false }] }] } })); await p3.reload();
+    await toSettings(p3); await p3.click('[data-act="driveconnect"]'); await p3.waitForTimeout(900);
+    const m = await p3.evaluate(() => ({ s: S.sessions.map(x => x.id).sort().join(), w: S.weighins.length, name: S.profile.name }));
+    check("connecting with data on the phone merges the Drive backup in (nothing lost on either side)", m.s.split(",").length === 3 && m.s.split(",").includes("a") && m.s.split(",").includes("z"));
+    check("profile already on the phone is kept when merging", m.name === "Local" && m.w === 1);
+    check("the Drive backup now holds everything from both", backup().sessions.length === 3 && backup().weighins.length === 1);
+    // the workout in progress is backed up too, after a pause
+    await p3.evaluate(() => { DRIVE.LIVE_DELAY = 300; });
+    await p3.click('[data-tab="today"]'); await p3.click('[data-act="open"][data-i="0"]'); await p3.click('#ctaBox [data-act="done"]'); await p3.waitForTimeout(1200);
+    check("the workout in progress is in the Drive backup", !!(backup().plan && backup().plan.items.some(it => it.sets.some(st => st.done))));
+    await ctx3.close();
   }
 
   // ---------------------------------------------------------------- updates (real service worker)

@@ -194,6 +194,7 @@ h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0}
 .ill-s-prop{stroke:var(--ill-prop)}.ill-f-prop{fill:var(--ill-prop)}.ill-s-floor{stroke:var(--ill-floor)}.ill-f-floor{fill:var(--ill-floor)}
 .ill-s-iron{stroke:var(--ill-iron)}.ill-f-iron{fill:var(--ill-iron)}.ill-s-ironin{stroke:var(--ill-ironin)}.ill-f-ironin{fill:var(--ill-ironin)}
 .ill-s-arrow{stroke:var(--ill-arrow)}.ill-f-arrow{fill:var(--ill-arrow)}
+.fpic-tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .fpic{margin:10px 0 0;background:none;border:0;box-shadow:none}
 .fpic .ill{width:100%;aspect-ratio:4/3;max-height:30vh;max-height:30dvh}
 .sheet-b .fpic .ill{max-height:38vh;max-height:38dvh}
@@ -1812,7 +1813,7 @@ function viewFocus(){
     <div class="fbody">
       <div class="grp">${gName(e.group)||""}${e.nogym?` · <span class="ngtag">${tr("No gym")}</span>`:""}${partnerOf(i)!==null?` · <span class="sstag">${tr("Superset with {x}", {x:esc((exById(items[partnerOf(i)].ex)||{name:""}).name)})}</span>`:""}${it.light?` · <span class="ngtag">${tr("Lighter week")}</span>`:""}</div>
       <h2 class="fname">${esc(e.name)}${it.sets.some(x=>x.pr)?` <span class="prbadge">${tr("New PR")}</span>`:""}</h2>
-      ${howOpen ? picAnimHTML(e) : picHTML(e)}
+      <div class="fpic-tap" data-act="howtoggle">${howOpen ? picAnimHTML(e) : picHTML(e)}</div>
       ${e.desc?`<p class="how${howOpen?" open":""}">${esc(exDesc(e))}</p><button class="link more" data-act="howtoggle">${howOpen?tr("Show less"):tr("Show more")}</button>`:""}
       ${noteHTML(it.ex)}
       ${upNext}

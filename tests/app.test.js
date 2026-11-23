@@ -540,6 +540,65 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await ctx.close();
   }
 
+  console.log("muscle volume, lighter week, effort per set, supersets");
+  {
+    const mon = await (async () => 0)();
+    const plan = { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8, done: false }, { w: 60, r: 8, done: false }, { w: 60, r: 8, done: false }] }, { ex: 39, sets: [{ w: 80, r: 5, done: false }, { w: 80, r: 5, done: false }, { w: 80, r: 5, done: false }] }, { ex: 6, sets: [{ w: 12, r: 10, done: false }, { w: 12, r: 10, done: false }] }] };
+    const { ctx, page } = await open(browser, URL, baseSeed({ sessions: [], plan }));
+    // weekly sets per muscle: bench (chest, triceps, shoulders) x3 sets this week
+    await page.evaluate(() => { const d = new Date(); S.sessions.push({ id: "wk1", date: d.toISOString(), v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8 }, { w: 60, r: 8 }, { w: 60, r: 8 }] }] }); histVer++; });
+    const mv = await page.evaluate(() => weekMuscleSets());
+    check("weekly sets: main muscle counts a full set, others half", mv.C === 3 && mv.T === 1.5 && mv.S === 1.5);
+    await page.evaluate(() => { tab = "history"; render(); });
+    check("History shows sets per muscle this week", await page.isVisible(".mvol") && (await page.$$(".mv-row")).length === 10 && /Sets per muscle this week/.test(await page.textContent(".mvol")));
+    await page.evaluate(() => { S.sessions = []; histVer++; tab = "today"; render(); });
+
+    // effort per set: chips, stored on the set, used by the next hint
+    await page.evaluate(() => openFocus(0));
+    check("effort chips show under the weight cards", (await page.$$(".rir .chip")).length === 4);
+    await page.click('.rir [data-act="rir"][data-v="3"]');
+    check("tapping effort stores reps left on the current set", (await stored(page)).plan.items[0].sets[0].rir === 3);
+    const easy = await page.evaluate(() => { S.sessions.push({ id: "h1", date: new Date(Date.now() - 2 * 864e5).toISOString(), v: 2, items: [{ ex: 1, sets: [{ w: 100, r: 5, rir: 3 }, { w: 100, r: 5, rir: 4 }] }, { ex: 5, sets: [{ w: 20, r: 8, rir: 0 }] }] }); histVer++; return { e: overloadHint(1), h: overloadHint(5) }; });
+    check("easy last time: hint suggests a double jump", easy.e.easy && easy.e.opts[0].w === 105 && /felt easy/.test(easy.e.text));
+    check("all-out last time: hint keeps the weight and adds a rep", easy.h.opts[0].w === 20 && easy.h.opts[0].r === 9 && /all-out/.test(easy.h.text));
+    await page.evaluate(() => { S.settings.rir = false; render(); });
+    check("effort per set can be turned off in Settings", !(await page.$(".rir")));
+    await page.evaluate(() => { delete S.settings.rir; S.sessions = []; histVer++; S.plan.items[0].sets[0].rir = undefined; render(); });
+
+    // supersets: bench + item 2, alternate A, B, rest, A...
+    await page.click('[data-act="sspair"]');
+    let st = await stored(page);
+    check("Superset pairs the exercise with the next one", st.plan.items[0].ss && st.plan.items[0].ss === st.plan.items[1].ss && !st.plan.items[2].ss);
+    await page.click('#ctaBox [data-act="done"]');
+    let f = await page.evaluate(() => ({ i: focus.i, rest: !!rest }));
+    check("after a superset set it goes straight to the partner, no rest", f.i === 1 && !f.rest);
+    await page.click('#ctaBox [data-act="done"]');
+    f = await page.evaluate(() => ({ i: focus.i, rest: !!rest, sel: selSet }));
+    check("after the round it rests and returns to the first exercise", f.i === 0 && f.rest && f.sel === 1);
+    check("Today shows the superset pairing", await page.evaluate(() => { focus = null; rest = null; tab = "today"; render(); return document.querySelectorAll(".row small.sstag").length === 2; }));
+    await page.evaluate(() => openFocus(0)); await page.click('[data-act="ssunpair"]');
+    st = await stored(page);
+    check("Unpair removes the superset", !st.plan.items[0].ss && !st.plan.items[1].ss);
+
+    // lighter week: nudge when 3 lifts stalled, then lighter workouts
+    await page.evaluate(() => { focus = null; S.plan = null;
+      for (let k = 0; k < 3; k++) S.sessions.push({ id: "p" + k, date: new Date(Date.now() - (10 - k * 3) * 864e5).toISOString(), v: 2, items: [{ ex: 0, sets: [{ w: 80, r: 5 }] }, { ex: 39, sets: [{ w: 100, r: 5 }] }, { ex: 1, sets: [{ w: 120, r: 5 }] }] });
+      histVer++; tab = "today"; render(); });
+    check("lighter-week nudge when 3 lifts are stuck", await page.isVisible('.banner.dl [data-act="deloadstart"]'));
+    await page.click('[data-act="deloadstart"]');
+    await page.click('[data-act="gen"]');
+    const lw = await page.evaluate(() => ({ on: deloadOn(), bench: S.plan.items.find(it => it.ex === 0), hint: overloadHint(0), banner: !!document.querySelector(".banner.dl-on") }));
+    check("lighter week: about 60% of the weight and one set fewer, no push to go up", lw.on && (!lw.bench || (lw.bench.sets[0].w === 47.5 && lw.bench.sets.length === 2 && lw.bench.light)) && lw.hint === null && lw.banner);
+    check("lighter-week weights are loadable", await page.evaluate(() => lighterLoad(0, 80) === 47.5 && lighterLoad(5, 20) === 10 && lighterLoad(1, 101) === 60));
+    await page.click('[data-act="deloadend"]');
+    check("ending the lighter week brings normal hints back", await page.evaluate(() => !deloadOn() && overloadHint(0) !== null));
+    await page.evaluate(() => { S.settings.deloadSnooze = Date.now() + 864e5; render(); });
+    check("the nudge can be put off", !(await page.$(".banner.dl")));
+    await page.evaluate(() => { tab = "body"; render(); });
+    check("no weigh-in reminder on Body (it has its own button)", !(await page.$('[data-act="wisnooze"]')));
+    await ctx.close();
+  }
+
   console.log("hints, plateau, PRs, charts");
   {
     const three = [15, 10, 5].map((d, k) => ({ id: "p" + k, date: day(d), v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8 }] }, { ex: 39, sets: [{ w: 80 + k * 2.5, r: 5 }] }] }));
@@ -604,7 +663,7 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     await page.click('.sheet .cta[data-act="close"]');
     await page.click('[data-tab="history"]');
     const rows = await page.$$eval(".hrow", r => r.map(x => x.innerText.replace(/\s+/g, " ")));
-    check("History rows show date and time", /50 min/.test(rows[0]) && /time not recorded/.test(rows[1]), rows.join(" / "));
+    check("History rows show the time, and nothing for workouts logged before times were recorded", /50 min/.test(rows[0]) && !/time not recorded/.test(rows.join(" ")), rows.join(" / "));
     await ctx.close();
   }
 

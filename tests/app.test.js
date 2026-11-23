@@ -452,6 +452,19 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
   }
 
   // ---------------------------------------------------------------- animated exercise pictures
+  console.log("tapping the exercise picture opens the explanation");
+  {
+    const { ctx, page } = await open(browser, URL, baseSeed({ plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8, done: false }] }] } }));
+    await page.evaluate(() => openFocus(0));
+    await page.click(".fpic-tap .fpic"); await page.waitForTimeout(500);
+    const a = await page.evaluate(() => ({ open: howOpen, txt: !!document.querySelector(".how.open"), link: document.querySelector(".more").textContent, anim: !!(document.querySelector(".fpic .ill") || {})._anim }));
+    check("tapping the picture expands the text and starts the animation", a.open && a.txt && /Show less/.test(a.link) && a.anim);
+    await page.click(".fpic-tap .fpic"); await page.waitForTimeout(200);
+    const b = await page.evaluate(() => ({ open: howOpen, anim: !!(document.querySelector(".fpic .ill") || {})._anim, link: document.querySelector(".more").textContent }));
+    check("tapping it again collapses it and stops the animation", !b.open && !b.anim && /Show more/.test(b.link));
+    await ctx.close();
+  }
+
   console.log("animated exercise pictures");
   {
     const { ctx, page } = await open(browser, URL, baseSeed({ plan: { created: "", v: 2, items: [{ ex: 39, sets: [{ w: 80, r: 5, done: false }] }] } }), { mobile: true });

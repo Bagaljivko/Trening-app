@@ -518,6 +518,28 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
   }
 
   // ---------------------------------------------------------------- hints, plateau, PRs, charts
+  console.log("plates, warm-ups, estimated max");
+  {
+    const hist = [[30, 80, 5], [20, 85, 5], [10, 80, 8]].map(([d, w, r], k) => ({ id: "e" + k, date: day(d), v: 2, items: [{ ex: 0, sets: [{ w, r }] }] }));
+    const { ctx, page } = await open(browser, URL, baseSeed({ sessions: hist, plan: { created: "", v: 2, items: [{ ex: 0, sets: [{ w: 100, r: 5, done: false }, { w: 100, r: 5, done: false }] }, { ex: 6, sets: [{ w: 12, r: 10, done: false }] }] } }));
+    const calc = await page.evaluate(() => ({ p100: platesFor(100), p20: platesFor(20), p61: platesFor(61), p62: platesFor(62.5), wu: warmups(100), wu30: warmups(30), e: bestE1RM({ sets: [{ w: 100, r: 5 }] }), e1: e1rm(100, 1), e20: e1rm(50, 20) }));
+    check("plates per side for 100 kg on a 20 kg bar: 25 + 15", JSON.stringify(calc.p100) === "[25,15]" && JSON.stringify(calc.p20) === "[]" && calc.p61 === null && JSON.stringify(calc.p62) === "[20,1.25]");
+    check("warm-up ramp for 100 kg: bar x10, 50 x5, 70 x3, 85 x1", JSON.stringify(calc.wu) === JSON.stringify([{ w: 20, r: 10 }, { w: 50, r: 5 }, { w: 70, r: 3 }, { w: 85, r: 1 }]) && calc.wu30.length === 0);
+    check("estimated max: 100 kg x 5 is about 116.7 kg; 1 rep is itself; reps capped at 12", calc.e === 116.7 && calc.e1 === 100 && calc.e20 === 70);
+    await page.evaluate(() => openFocus(0));
+    check("barbell exercise shows plates and warm-up sets", /25\+15 \/side/.test(await page.textContent(".num.kg #plates")) && /Warm-up/.test(await page.textContent(".warm")));
+    await page.fill('input[data-f="w"]', "60");
+    check("plates update while typing the weight", /^20 \/side$/.test(await page.textContent("#plates")));
+    await page.click('#ctaBox [data-act="done"]');
+    check("warm-ups are hidden after the first work set", !(await page.$(".warm")));
+    await page.evaluate(() => openFocus(1));
+    check("no plates for dumbbell exercises", !(await page.$("#plates")));
+    await page.evaluate(() => { focus = null; sheet = { type: "detail", id: 0 }; render(); });
+    const det = await page.textContent(".sheet");
+    check("exercise history shows estimated max and its chart", /est\. max/.test(det) && /Estimated max for 1 rep/.test(det) && /101/.test(det));
+    await ctx.close();
+  }
+
   console.log("hints, plateau, PRs, charts");
   {
     const three = [15, 10, 5].map((d, k) => ({ id: "p" + k, date: day(d), v: 2, items: [{ ex: 0, sets: [{ w: 60, r: 8 }] }, { ex: 39, sets: [{ w: 80 + k * 2.5, r: 5 }] }] }));
@@ -663,10 +685,11 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
         return json({ id, modifiedTime: files[id].modifiedTime });
       }
       if (req.method() === "POST" && u.pathname.endsWith("/files")) { const meta = req.postDataJSON(); id = "d" + (++n); files[id] = { id, name: meta.name, folder: true }; return json({ id }); }
+      if (id && req.method() === "DELETE") { delete files[id]; return route.fulfill({ status: 204, body: "" }); }
       if (id && u.searchParams.get("alt") === "media") return route.fulfill({ status: 200, contentType: "application/json", body: files[id].content });
       if (id) return files[id] ? json({ id, trashed: false }) : json({ error: { message: "nf" } }, 404);
-      const name = ((u.searchParams.get("q") || "").match(/name='([^']+)'/) || [])[1];
-      return json({ files: Object.values(files).filter(f => f.name === name).map(f => ({ id: f.id, name: f.name, modifiedTime: f.modifiedTime || new Date().toISOString() })) });
+      const q = u.searchParams.get("q") || "", name = (q.match(/name='([^']+)'/) || [])[1], has = (q.match(/name contains '([^']+)'/) || [])[1];
+      return json({ files: Object.values(files).filter(f => name ? f.name === name : has ? f.name.includes(has) : false).map(f => ({ id: f.id, name: f.name, modifiedTime: f.modifiedTime || new Date().toISOString() })) });
     };
     const gis = () => { window.google = { accounts: { oauth2: { initTokenClient: cfg => ({ requestAccessToken: () => setTimeout(() => cfg.callback({ access_token: "tok", expires_in: 3600 }), 5) }), hasGrantedAllScopes: () => true, revoke: () => {} } } }; };
     const backup = () => { const f = Object.values(files).find(x => x.name === "training-log-backup.json"); return f && JSON.parse(f.content); };
@@ -676,6 +699,18 @@ const noOverflow = page => page.evaluate(() => document.documentElement.scrollWi
     const page = await ctx.newPage(); page.on("dialog", d => d.accept());
     await page.goto(URL); await page.evaluate(s => localStorage.setItem("training-log-v1", JSON.stringify(s)), seed); await page.reload();
     await toSettings(page); await page.click('[data-act="driveconnect"]'); await page.waitForTimeout(800);
+    { const wk = await page.evaluate(() => ymd(weekStart(new Date())));
+      check("a dated weekly copy is kept on Drive", Object.values(files).some(f => f.name === `training-log-backup-${wk}.json` && JSON.parse(f.content).sessions.length === 1));
+      for (let k = 1; k <= 9; k++) { const d = new Date(Date.now() - k * 7 * 864e5); const key = d.toISOString().slice(0, 10); files["old" + k] = { id: "old" + k, name: `training-log-backup-${key}.json`, content: JSON.stringify({ app: "training-log", sessions: [] }), modifiedTime: d.toISOString() }; }
+      delete files[Object.keys(files).find(k => files[k].name === `training-log-backup-${wk}.json`)];
+      await page.evaluate(async () => { drive.weekCopy = ""; await driveBackupNow(); });
+      const copies = Object.values(files).filter(f => /^training-log-backup-\d/.test(f.name)).map(f => f.name).sort();
+      check("only the last 8 weekly copies are kept, oldest removed", copies.length === 8 && copies[7] === `training-log-backup-${wk}.json` && !files.old9 && !files.old8);
+      await toSettings(page); await page.click('[data-act="driverestore"]'); await page.waitForSelector('[data-act="drivecopy"]', { timeout: 5000 });
+      check("Restore from Drive lists the latest backup and the weekly copies", (await page.$$('[data-act="drivecopy"]')).length === 8 && await page.isVisible('[data-act="drivelatest"]'));
+      await page.click('[data-act="drivelatest"]'); await page.waitForSelector('[data-act="dorestore"]', { timeout: 3000 });
+      check("picking a backup shows what it would add before changing anything", (await page.evaluate(() => S.sessions.length)) === 1);
+      await page.evaluate(() => { sheet = null; tab = "today"; render(); }); }
     check("connecting Drive makes a first backup", backup() && backup().sessions.length === 1 && Object.values(files).some(f => f.folder && f.name === "Training log"));
     const ups = () => Object.values(files).find(x => x.name === "training-log-backup.json").modifiedTime;
     const u0 = ups();
